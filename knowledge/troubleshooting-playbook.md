@@ -39,7 +39,7 @@ print(s.recv(4096).decode("utf-8", errors="replace"))
 '
 ```
 
-### 3. OpenWrt VM 100 (`ssh root@192.168.1.129`)
+### 3. OpenWrt VM 100 (`ssh openwrt-vm` / `192.168.1.129`)
 ```bash
 # Check if USB Ethernet adapter has carrier
 ip link show eth4
