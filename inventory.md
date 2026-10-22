@@ -6,13 +6,13 @@
 
 ## 🖥️ Compute & Host Nodes
 
-| Asset Name | Role / Function | Hardware / Platform | Access Command / Details |
-| :--- | :--- | :--- | :--- |
-| **Main PC** | Primary Workstation / Host | HP EliteDesk 800 G3 Mini | Local host (`rubait`) |
-| **Proxmox Host** | Hypervisor Server | ThinkPad Laptop (Intel i5 3rd Gen) | `ssh proxmox` (`192.168.1.2`) |
-| **Physical Router** | Main Home Gateway & Wi-Fi AP | TP-Link Archer C6 v3 (OpenWrt) | `ssh router` (`192.168.1.1`) |
-| **Mobile Node** | Mobile Companion / Automations | Realme P1 5G (Termux + MacroDroid) | `ssh phone` |
-| **Virtual Router** | Test lab & Container Gateway | OpenWrt 25.12.6 VM (Proxmox VM 100) | `ssh openwrt-vm` (`192.168.1.129`) |
+| Asset Name          | Role / Function                | Hardware / Platform                 | Access Command / Details           |
+| :------------------ | :----------------------------- | :---------------------------------- | :--------------------------------- |
+| **Main PC**         | Primary Workstation / Host     | HP EliteDesk 800 G3 Mini            | Local host (`rubait`)              |
+| **Proxmox Host**    | Hypervisor Server              | ThinkPad Laptop (Intel i5 3rd Gen)  | `ssh proxmox` (`192.168.1.2`)      |
+| **Physical Router** | Main Home Gateway & Wi-Fi AP   | TP-Link Archer C6 v3 (OpenWrt)      | `ssh router` (`192.168.1.1`)       |
+| **Mobile Node**     | Mobile Companion / Automations | Realme P1 5G (Termux + MacroDroid)  | `ssh phone`                        |
+| **Virtual Router**  | Test lab & Container Gateway   | OpenWrt 25.12.6 VM (Proxmox VM 100) | `ssh openwrt-vm` (`192.168.1.129`) |
 
 ---
 
@@ -59,12 +59,12 @@ The HP EliteDesk Mini PC currently runs several local services:
 
 ## 🗺️ Network Zones Topology
 
-| Zone / Subnet | VLAN / Bridge | Gateway IP | Intended Purpose |
-| :--- | :--- | :--- | :--- |
-| **Home LAN** | `vmbr0` / `br-lan` | `192.168.1.1` | Wi-Fi devices, PC, Proxmox host management |
-| **Safe (DMZ)** | `vmbr1` / `eth1` | `10.10.10.1` | n8n, Vaultwarden, Nginx, MQTT, Telegram Bots |
-| **Unsafe (Lab)** | `vmbr2` / `eth2` | `10.20.20.1` | Malware analysis, untrusted experiments (isolated) |
-| **Not-Sure (Test)**| `vmbr3` / `eth3` | `10.30.30.1` | Temporary staging and proof-of-concepts |
+| Zone / Subnet       | VLAN / Bridge      | Gateway IP    | Intended Purpose                                         |
+| :------------------ | :----------------- | :------------ | :------------------------------------------------------- |
+| **Home LAN**        | `vmbr0` / `br-lan` | `192.168.1.1` | Wi-Fi devices, PC, Proxmox host management               |
+| **Safe (DMZ)**      | `vmbr1` / `eth1`   | `10.10.10.1`  | n8n, Vaultwarden, Nginx,                                 |
+| **Unsafe (Lab)**    | `vmbr2` / `eth2`   | `10.20.20.1`  | Malware analysis, untrusted experiments (isolated), MQTT |
+| **Not-Sure (Test)** | `vmbr3` / `eth3`   | `10.30.30.1`  | Temporary staging and proof-of-concepts, Telegram Bots   |
 
 ---
 

@@ -32,11 +32,7 @@ By maintaining the Physical Router as the sole DHCP server on the `192.168.1.0/2
 
 ## ⚙️ Execution & Changes Applied
 
-### 1. Laptop Power / Lid Configuration
-- Created `/etc/systemd/logind.conf.d/ignore-lid.conf` with `HandleLidSwitch=ignore`.
-- Masked `sleep.target`, `suspend.target`, `hibernate.target`, `hybrid-sleep.target`.
-
-### 2. Proxmox VM 100 (OpenWrt) Provisioning
+### 1. Proxmox VM 100 (OpenWrt) Provisioning
 - **Hardware:** 1 shared vCPU (`cpuunits=1000`), 512 MB RAM, 2 GB root disk.
 - **Bridges:**
   - `vmbr0` (Home LAN / WAN uplink)
@@ -46,7 +42,7 @@ By maintaining the Physical Router as the sole DHCP server on the `192.168.1.0/2
 - **USB Passthrough:** Attached `35b5:3500` (Naxiang USB LAN adapter) permanently via hardware ID.
 - **Drivers:** Installed `kmod-usb-net-cdc-ether` and `usbutils` (mapped to `eth4`).
 
-### 3. OpenWrt VM Network & Routing Rules
+### 2. OpenWrt VM Network & Routing Rules
 ```uci
 # Primary fiber connection (USB adapter)
 set network.wan_fiber=interface
@@ -64,7 +60,7 @@ set network.homelan.metric='20'
 set dhcp.homelan.ignore='1'
 ```
 
-### 4. Physical Router (Archer C6) Routing Rules
+### 3. Physical Router (Archer C6) Routing Rules
 ```uci
 set network.wan.metric='10'
 set network.lan_fallback=route
