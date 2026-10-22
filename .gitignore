@@ -1,0 +1,15 @@
+# Environment variables & secrets
+.env
+*.env
+**/.env
+**/*.env
+.env.*
+!.env.example
+
+# Temporary and local runtime files
+*.bak
+*.tmp
+*.log
+/tmp/
+.DS_Store
+Thumbs.db
