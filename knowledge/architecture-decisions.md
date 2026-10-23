@@ -8,6 +8,60 @@
 - [[#ADR-001 Master Topology Refinement and Ingress Egress Realignment]] *(2026-10-23)*
 - [[#ADR-002 Fail-Safe Mode 1 Shutdown, Storage Bind Mounts, and Management Bots Zone]] *(2026-10-23)*
 - [[#ADR-003 Isolated Low-Power IoT Wireless Tier, MAC Allowlisting, and MQTT Telemetry Routing]] *(2026-10-23)*
+- [[#ADR-004 Live Node Zone Realignment, WAN Metric Priority, and Zero-Drift Standardization]] *(2026-10-23)*
+
+---
+
+## ADR-004: Live Node Zone Realignment, WAN Metric Priority, and Zero-Drift Standardization
+
+- **Date:** 2026-10-23
+- **Status:** Approved & Implemented
+- **Scope:** Live OpenWrt VM zone interface renaming, WAN masquerading, routing metric prioritization, Proxmox host bridge provisioning (`vmbr4`–`vmbr6`), and LXC 200 metadata unification.
+
+---
+
+### 1. Context & Problem Statement
+Following the architecture redesign in ADR-001 through ADR-003, a comprehensive audit revealed operational configuration drift between the repository blueprints and the live node states:
+1. **Legacy Interface Labels on VM 100:** OpenWrt VM still utilized early prototype interface names (`safe`, `unsafe`, `notsure`) across `/etc/config/network`, `dhcp`, and `firewall`.
+2. **Missing WAN Masquerading in Mode 2:** The OpenWrt firewall `zone wan` only included `wan_fiber`, meaning traffic routed through `wan_vlan` (Mode 2) did not receive proper outbound NAT masquerading.
+3. **Ambiguous Default Route Priority:** Both `wan_fiber` (USB swing WAN) and `wan_vlan` (802.1Q trunk WAN) were assigned identical metric `10`, causing routing race conditions when both links had carrier.
+4. **Dangerous Legacy Firewall Hole:** An unneeded rule `Allow-Admin-WAN` left over from early initial testing exposed LuCI (80, 443) and Dropbear SSH (22) directly to the public internet.
+5. **Unprovisioned Bridges on Hypervisor:** Proxmox host `/etc/network/interfaces` only defined `vmbr0`–`vmbr3`, leaving `vmbr4` (Unsafe Online), `vmbr5` (DMZ), and `vmbr6` (Bots) uncreated in the kernel.
+6. **Container Metadata Discrepancy:** LXC 200 was named `nginx-home` in Proxmox metadata despite its internal hostname and function being `wan-controller`.
+
+---
+
+### 2. Architectural Decisions & Implementations
+
+#### 2.1 OpenWrt VM Zone Renaming & Firewall Sync
+- **Action:** Executed unified renaming across UCI subsystems on VM 100:
+  - `safe` $\rightarrow$ `safe_internal` (`eth1` / `10.10.10.1/24`)
+  - `unsafe` $\rightarrow$ `public_ingress` (`eth2` / `10.20.20.1/24`)
+  - `notsure` $\rightarrow$ `ha_iot` (`eth3` / `10.30.30.1/24`)
+- **Firewall Realignment:**
+  - Added `wan_vlan` to `firewall.@zone[1].network` alongside `wan_fiber`.
+  - Added outbound forwarding rule from `public_ingress` to `wan` to permit Cloudflare Tunnel edge connections.
+  - Deleted legacy `Allow-Admin-WAN` rule, completely closing router admin ports to public WAN interfaces.
+
+#### 2.2 WAN Route Metric Prioritization
+- **Action:** Explicitly differentiated kernel routing metrics in `/etc/config/network`:
+  - `network.wan_vlan.metric='10'` (Primary inter-router trunk WAN dialer)
+  - `network.wan_fiber.metric='15'` (Secondary USB swing WAN dialer)
+- **Result:** Prevents default route flapping and guarantees deterministic traffic forwarding when both WAN links are active (Mode 3).
+
+#### 2.3 Proxmox Host Bridge Provisioning
+- **Action:** Added `vmbr4`, `vmbr5`, and `vmbr6` to `/etc/network/interfaces` on Proxmox host and executed `ifreload -a`.
+- **Result:** All 6 virtual bridges (`vmbr1` through `vmbr6`) plus `vmbr100` are active in the Linux kernel and ready for container attachment.
+
+#### 2.4 LXC 200 Container & DNS Alignment
+- **Action:** Synchronized Proxmox metadata via `pct set 200 -hostname wan-controller` and created a static DHCP host reservation on the physical Archer C6 router (`bc:24:11:eb:6f:6e` ➔ `192.168.1.130`, `wan-controller.lan`).
+
+---
+
+### 3. Consequences & Impact
+- Zero drift between live system state and documentation repository.
+- Mode 2 WAN failover and fail-back functions reliably with proper outbound NAT masquerading.
+- Router management interfaces are fully protected from public WAN exposure.
 
 ---
 

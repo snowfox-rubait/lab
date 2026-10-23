@@ -174,10 +174,10 @@ uci commit dhcp
 
 #### B. Firewall Lockdown (Zero-Trust IoT Policy)
 ```bash
-# Ensure Zone 3 (notsure / ha_iot) rejects input and forwards
+# Ensure Zone 3 (ha_iot) rejects input and forwards
 uci set firewall.zone_ha_iot=zone
 uci set firewall.zone_ha_iot.name='ha_iot'
-uci set firewall.zone_ha_iot.network='notsure'
+uci set firewall.zone_ha_iot.network='ha_iot'
 uci set firewall.zone_ha_iot.input='REJECT'
 uci set firewall.zone_ha_iot.output='ACCEPT'
 uci set firewall.zone_ha_iot.forward='REJECT'
