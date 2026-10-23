@@ -144,16 +144,18 @@ Host laptop
 
 ---
 
-## 🔄 OpenWrt VM Live Interface Name Mapping
+## 🔄 OpenWrt VM Interface & Network Zone Mapping
 
-The OpenWrt VM (VM 100) was initially provisioned with transitional zone names. When interacting with UCI on VM 100, refer to this exact map:
+The OpenWrt VM (VM 100) interfaces are unified with the master architecture zones:
 
-| UCI Network Name | Linux Interface | Proxmox Bridge | Subnet | Master Architectural Role |
-| :--- | :--- | :--- | :--- | :--- |
-| `network.homelan` | `eth0` | `vmbr0` | `192.168.1.129/24` | Out-of-Band Management & Physical LAN WAN link |
-| `network.safe` | `eth1` | `vmbr1` | `10.10.10.1/24` | Safe Internal Zone |
-| `network.unsafe` | `eth2` | `vmbr2` | `10.20.20.1/24` | Safe Public Ingress Zone (Vaultwarden / Tunnel) |
-| `network.notsure` | `eth3` | `vmbr3` | `10.30.30.1/24` | Home Assistant & IoT Zone (VLAN 30 Trunk) |
-| `network.wan_fiber`| `eth4` | USB NIC Passthrough| Dynamic PPPoE | Direct Fiber WAN (Emergency swing link) |
-| `network.wan_vlan` | `eth5` | `vmbr100` | Dynamic PPPoE | VLAN 100 Tagged PPPoE Dialer (Mode 2 / Mode 3) |
-
+| UCI Interface Name | Linux Device | Proxmox Bridge | Gateway Subnet | Architectural Role | Current Status |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `network.homelan` | `eth0` | `vmbr0` | `192.168.1.129/24` | Out-of-Band Management & Physical LAN link | 🟢 Live |
+| `network.safe_internal` | `eth1` | `vmbr1` | `10.10.10.1/24` | Safe Internal Zone (DB, NAS, Gitea) | 🟢 Live |
+| `network.public_ingress`| `eth2` | `vmbr2` | `10.20.20.1/24` | Safe Public Ingress (Tunnel, Vaultwarden) | 🟢 Live |
+| `network.ha_iot` | `eth3` | `vmbr3` | `10.30.30.1/24` | Home Assistant & IoT Zone (VLAN 30 Trunk) | 🟢 Live |
+| `network.wan_fiber` | `eth4` | USB Passthrough | Dynamic PPPoE | Direct Fiber WAN (Emergency swing link) | 🟢 Live (Metric 15) |
+| `network.wan_vlan` | `eth5` | `vmbr100` | Dynamic PPPoE | VLAN 100 Tagged PPPoE Dialer (Mode 2 / Mode 3) | 🟢 Live (Metric 10) |
+| `network.unsafe` | *Pending* | `vmbr4` | `10.40.40.1/24` | Unsafe Online (Tor, *Arr, qBittorrent) | ⚪ Bridge Created on Host |
+| `network.dmz` | *Pending* | `vmbr5` | `10.50.50.1/24` | Direct Ingress DMZ (Asterisk, Mail) | ⚪ Bridge Created on Host |
+| `network.mgmt_bots` | *Pending* | `vmbr6` | `10.60.60.1/24` | Management Bots Zone (Telegram) | ⚪ Bridge Created on Host |
