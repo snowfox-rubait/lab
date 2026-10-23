@@ -81,15 +81,16 @@ server {
     }
 }
 
-# --- Private Internal Server Block (Tailscale / LAN Only) ---
+# --- Private Internal Server Block (Local IP Only - Port 8443) ---
 server {
     listen 10.20.20.10:8443 ssl;
     server_name vault-internal.snowfox.live;
 
+    # Strictly local access only (no Tailscale or public WAN)
     location /admin {
         allow 10.10.10.0/24;
+        allow 10.20.20.0/24;
         allow 192.168.1.0/24;
-        allow 100.64.0.0/10;
         deny all;
 
         proxy_pass http://vaultwarden_backend;

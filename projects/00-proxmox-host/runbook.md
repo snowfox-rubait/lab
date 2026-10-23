@@ -95,6 +95,7 @@ Managed by `/usr/local/bin/power-manager.sh` and `/etc/cron.d/power-manager`.
 | `vmbr3` | *None (isolated)*        | Home Assistant & IoT Zone (`10.30.30.0/24`)                     |
 | `vmbr4` | *None (isolated)*        | Unsafe / Online Workloads Zone (`10.40.40.0/24`)               |
 | `vmbr5` | *None (isolated)*        | Direct Protocol Ingress DMZ (`10.50.50.0/24`)                  |
+| `vmbr6` | *None (isolated)*        | Management & Telegram Bots Zone (`10.60.60.0/24`)              |
 | `vmbr100` | *None (isolated)*      | Dedicated WAN VLAN Trunk Bridge (VLAN 100 for VM PPPoE dialer) |
 
 ---

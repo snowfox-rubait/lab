@@ -33,8 +33,8 @@
   - Authentication: `git` and `gh` CLI fully authenticated locally.
 - **Apex Domain:** `snowfox.live`
   - **Registrar / Expiry:** Registered 2026-03-17, Expires **2027-03-17**.
-  - **DNS & Edge:** Cloudflare Zone ID `bf2fea1c489c7d7d258011e77305d30b`, Account ID `cd241dca8e1b54b75d761bf0225ceea4`.
-  - **IaC Tooling:** Terraform in `~/.cloudflare-terraform/` (Tunnel `snowfox-tunnel` ID: `c63f3937-1ec8-4d41-9a7b-f7cc99d37efd`).
+  - **DNS & Edge:** Cloudflare (Zone ID, Account ID, Tunnel ID configured via local `.env`).
+  - **IaC Tooling:** Terraform in `~/.cloudflare-terraform/` (`snowfox-tunnel`).
   - **Current Live DNS Records:** None (Clean slate; old ZeroTier `openwrt` and idle tunnel CNAMEs destroyed via Terraform).
   - **Cloudflare Security Posture:**
     - Security Level: `Medium`
@@ -64,18 +64,21 @@ The HP EliteDesk Mini PC currently runs several local services:
 | **Home LAN / OOB**          | `vmbr0` / `br-lan` | `192.168.1.1` | Wi-Fi devices, PC, Proxmox host management, LXC 200, Pi-hole  |
 | **Safe (Internal)**         | `vmbr1` / `eth1`   | `10.10.10.1`  | Central DB, DBBackup, Gitea, Immich, NAS, n8n, BookStack      |
 | **Safe (Public Ingress)**   | `vmbr2` / `eth2`   | `10.20.20.1`  | Vaultwarden, Headscale (via Cloudflare Tunnel)                |
-| **Home Assistant (IoT)**    | `vmbr3` / `eth3`   | `10.30.30.1`  | Home Assistant core & smart home integrations (Tailscale)     |
-| **Unsafe (Online / Lab)**   | `vmbr4` / `eth4`   | `10.40.40.1`  | Tor obfs4, *Arr stack, qBittorrent, MQTT, Telegram bot        |
+| **Home Assistant (IoT)**    | `vmbr3` / `eth3`   | `10.30.30.1`  | Home Assistant core, Mosquitto MQTT & IoT sensors (Tailscale) |
+| **Unsafe (Online / Lab)**   | `vmbr4` / `eth4`   | `10.40.40.1`  | Tor obfs4, *Arr stack, qBittorrent (storage via host mount)   |
 | **DMZ (Direct Ingress)**    | `vmbr5` / `eth5`   | `10.50.50.1`  | Asterisk/FreePBX VoIP, Self-Hosted Mail (Fail2ban, raw ports) |
+| **Management Bots**         | `vmbr6` / `eth6`   | `10.60.60.1`  | Isolated Telegram & automation bots with audited pinholes     |
 
 ---
 
 ## 🖧 Hardware MAC Addresses & WOL Reference
 
-| Device / Interface | MAC Address | IP Mapping | Notes |
+> **Note:** Exact hardware MAC addresses are maintained in the local gitignored `.env` file (see `.env.example`).
+
+| Device / Interface | Variable in `.env` | IP Mapping | Notes |
 | :--- | :--- | :--- | :--- |
-| **Proxmox Laptop (Built-in LAN `enp12s0`)** | `b8:88:e3:e7:5e:1f` | `192.168.1.2` | Primary Wake-on-LAN target |
-| **Proxmox Legacy Static Lease (`eno1`)** | `10:62:e5:00:9f:8f` | `192.168.1.2` | Configured in router `/etc/config/dhcp` |
-| **Proxmox USB Adapter (`eth4`)** | `ec:9a:0c:1c:c3:dd` | Dynamic / WAN | USB-Ethernet swing WAN |
-| **ThinkPad Wi-Fi (`wlp3s0`)** | `60:36:dd:50:c6:8e` | `192.168.1.153` | Internal wireless card |
-| **Main Workstation PC** | `94:b8:6d:59:b8:6b` | `192.168.1.197` | HP EliteDesk Mini PC |
+| **Proxmox Laptop (Built-in LAN `enp12s0`)** | `MAC_PROXMOX_BUILTIN` | `192.168.1.2` | Primary Wake-on-LAN target |
+| **Proxmox Legacy Lease (`eno1`)** | `MAC_PROXMOX_LEGACY` | `192.168.1.2` | Former static lease in `/etc/config/dhcp` |
+| **Proxmox USB Adapter (`eth4`)** | `MAC_PROXMOX_USB` | Dynamic / WAN | USB-Ethernet swing WAN |
+| **ThinkPad Wi-Fi (`wlp3s0`)** | `MAC_PROXMOX_WIFI` | `192.168.1.153` | Internal wireless card (standby) |
+| **Main Workstation PC** | `MAC_MAIN_PC` | `192.168.1.197` | HP EliteDesk Mini PC |

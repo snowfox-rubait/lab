@@ -24,17 +24,17 @@ To maintain high availability and defense-in-depth, the network is partitioned i
                            [ Out-of-Band Controller ]                    [ OpenWrt VM (VM 100) ]
                              LXC 200 (192.168.1.130)                     WAN: 192.168.1.129
                              (Independent Fail-safe)                               │
-        ┌─────────────────────────┬─────────────────────────┬─────────────────────┼─────────────────────┐
-        │ vmbr1 (Safe Internal)   │ vmbr2 (Public Ingress)  │ vmbr3 (IoT / HA)    │ vmbr4 (Unsafe Online)│ vmbr5 (Protocol DMZ)
-        │ 10.10.10.0/24           │ 10.20.20.0/24           │ 10.30.30.0/24       │ 10.40.40.0/24       │ 10.50.50.0/24
-        ▼                         ▼                         ▼                     ▼                     ▼
-[ nginx-safe (LXC 201) ]   [ nginx-public (LXC 202) ]   [ Home Assistant ]   [ Direct Outbound NAT ] [ Direct Port DMZ ]
- 10.10.10.10               10.20.20.10                   10.30.30.10          (No Ingress Proxy)     (No HTTP Proxy)
-        │                         │                         │                     │                     │
-┌───────┴────────┐       ┌────────┴────────┐       ┌────────┴────────┐   ┌────────┴────────┐   ┌────────┴────────┐
-Central DB, n8n,          Vaultwarden,              HA Core, Mosquitto    Tor obfs4, *Arr,      Asterisk FreePBX,
-Gitea, Immich, NAS,       Headscale Control         MQTT, ESP Sensors     qBittorrent,          Self-Hosted Mail
-BookStack, Kiwix          (Cloudflare Tunnel)       (Tailscale Native)    Telegram Polling      (Fail2ban)
+        ┌─────────────────────────┬─────────────────────────┬─────────────────────┬─────────────────────┬─────────────────────┐
+        │ vmbr1 (Safe Internal)   │ vmbr2 (Public Ingress)  │ vmbr3 (IoT / HA)    │ vmbr4 (Unsafe Online)│ vmbr5 (Protocol DMZ)│ vmbr6 (Mgmt Bots)
+        │ 10.10.10.0/24           │ 10.20.20.0/24           │ 10.30.30.0/24       │ 10.40.40.0/24       │ 10.50.50.0/24       │ 10.60.60.0/24
+        ▼                         ▼                         ▼                     ▼                     ▼                     ▼
+[ nginx-safe (LXC 201) ]   [ nginx-public (LXC 202) ]   [ Home Assistant ]   [ Direct Outbound NAT ] [ Direct Port DMZ ]   [ Telegram Bots ]
+ 10.10.10.10               10.20.20.10                   10.30.30.10          (No Ingress Proxy)     (No HTTP Proxy)       (Dedicated Egress)
+        │                         │                         │                     │                     │                     │
+┌───────┴────────┐       ┌────────┴────────┐       ┌────────┴────────┐   ┌────────┴────────┐   ┌────────┴────────┐   ┌────────┴────────┐
+Central DB, n8n,          Vaultwarden,              HA Core, Mosquitto    Tor obfs4, *Arr,      Asterisk FreePBX,     Router Controller,
+Gitea, Immich, NAS,       Headscale Control         MQTT, ESP Sensors     qBittorrent (Shared   Self-Hosted Mail      Vaultwarden Bot
+BookStack, Kiwix          (Cloudflare Tunnel)       (Tailscale Native)    Host Storage Mount)   (Fail2ban)            (Audited Pinholes)
 ```
 
 ---
@@ -105,9 +105,9 @@ All homelab services live behind the OpenWrt VM, partitioned by protocol, access
 - **Access Model:** Services in this zone initiate outbound connections to the internet or connect through external VPNs/proxies.
 - **Hosted Services:**
   - `Tor Node`: Anti-censorship relay / bridge (`obfs4`)
-  - `*Arr Stack & qBittorrent`: Media indexers and P2P downloaders (bound to VPN)
-  - `Telegram Bots`: Outbound HTTPS long-polling (`api.telegram.org`), no open ports needed.
-- **Firewall Policy:** Drop all packets destined for `vmbr0`, `vmbr1`, `vmbr2`, `vmbr3`, or `vmbr5`. Completely quarantined.
+  - `*Arr Stack & qBittorrent`: Media indexers and P2P downloaders (bound to VPN).
+  - **Storage Architecture:** Media is written to host-level shared storage via Proxmox bind mounts (`/mnt/storage/media`), eliminating the need for network file-sharing pinholes into `vmbr1`.
+- **Firewall Policy:** Drop all packets destined for `vmbr0`, `vmbr1`, `vmbr2`, `vmbr3`, `vmbr5`, or `vmbr6`. Completely quarantined.
 
 ### 3.5 Zone 5: Protocol Direct DMZ (`vmbr5` - `10.50.50.0/24`)
 - **Gateway:** `10.50.50.1` (OpenWrt `eth5`)
@@ -117,6 +117,17 @@ All homelab services live behind the OpenWrt VM, partitioned by protocol, access
   - `Asterisk / FreePBX`: VoIP & VoWiFi PBX (SIP UDP/TCP 5060, RTP UDP range)
   - `Self-Hosted Mail`: Mail transfer agent (SMTP 25/587/465, IMAP 993)
 - **Firewall Policy:** Strict port forwarding pinholes; rate-limiting; hard isolation preventing access to `vmbr1` internal services.
+
+### 3.6 Zone 6: Management & Telegram Bots (`vmbr6` - `10.60.60.0/24`)
+- **Gateway:** `10.60.60.1` (OpenWrt `eth6`)
+- **Reverse Proxy:** **None** (Outbound polling to `api.telegram.org`).
+- **Access Model:** Dedicated bot runtime zone with audited firewall pinholes.
+- **Hosted Services:**
+  - `Router Controller Bot`: Telegram bot managing physical router and VM link states.
+  - `Vaultwarden Onboarding Bot`: Bot automating pay-to-invite onboarding.
+- **Firewall Policy:** Default drop toward all zones; explicit pinholes permitted only for:
+  - Destination `192.168.1.1:22` (Router SSH execution)
+  - Destination `10.20.20.11:8085` (Vaultwarden API)
 
 ---
 

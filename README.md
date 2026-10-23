@@ -27,12 +27,12 @@ flowchart TD
         ISP["ISP"] --> ONU["ONU"]
         ONU --> Router{"Physical Router<br/>OpenWrt Archer C6"}
 
-        Router -->|Parental controls / restricted network| Repeater["Wi-Fi Repeater"]
-        Repeater --> Dad["Dad's Phone"]
-        Repeater --> Mom["Mom's Phone"]
+        Router -->|Whole-Home Default Restrictions / Parental Control| Repeater["Wi-Fi Repeater"]
+        Repeater --> Dad["Dad's Phone (Restricted)"]
+        Repeater --> Mom["Mom's Phone (Restricted)"]
 
-        Router --> MyPhone["My Phone"]
-        Router --> PC["HP EliteDesk PC"]
+        Router -->|MAC Allowlist / Unrestricted| MyPhone["My Phone"]
+        Router -->|Wired LAN / Unrestricted| PC["HP EliteDesk PC"]
     end
 
     %% ==================================================
@@ -133,14 +133,19 @@ flowchart TD
                 direction TB
 
                 TorNode["Tor Node - obfs4"]
-                ArrStack["*Arr Stack & qBittorrent"]
-                Telegram["Telegram Bots<br/>Outbound polling: api.telegram.org"]
+                ArrStack["*Arr Stack & qBittorrent<br/>Direct host storage mount"]
             end
 
             %% VoIP / Direct Ingress DMZ
             subgraph ZoneDMZ["VoIP & Direct Ingress DMZ - vmbr5"]
                 Asterisk["Asterisk / FreePBX<br/>VoIP / VoWiFi<br/>Fail2ban"]
                 Mail["Self-Hosted Mail<br/>SMTP / IMAP / POP3<br/>Fail2ban"]
+            end
+
+            %% Dedicated Bots Zone
+            subgraph ZoneBots["Management Bots Zone - vmbr6"]
+                direction TB
+                Telegram["Telegram Bots<br/>Router Admin & Vaultwarden Bot<br/>Audited Firewall Pinholes"]
             end
         end
 
@@ -150,6 +155,7 @@ flowchart TD
         OpenWrt <-->|Virtual NIC / vmbr3| ZoneHA
         OpenWrt <-->|Virtual NIC / vmbr4| ZoneUnsafe
         OpenWrt <-->|Virtual NIC / vmbr5| ZoneDMZ
+        OpenWrt <-->|Virtual NIC / vmbr6| ZoneBots
     end
 
     %% Physical router to Proxmox

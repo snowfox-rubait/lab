@@ -6,6 +6,44 @@
 
 ## 📑 ADR Index
 - [[#ADR-001 Master Topology Refinement and Ingress Egress Realignment]] *(2026-10-23)*
+- [[#ADR-002 Fail-Safe Mode 1 Shutdown, Storage Bind Mounts, and Management Bots Zone]] *(2026-10-23)*
+
+---
+
+## ADR-002: Fail-Safe Mode 1 Shutdown, Storage Bind Mounts, and Management Bots Zone
+
+- **Date:** 2026-10-23
+- **Status:** Approved & Implemented
+- **Scope:** Host power management, zero-network shared storage for *Arr/NAS, dedicated management bots zone (`vmbr6`), and Vaultwarden admin confinement.
+
+---
+
+### 1. Decisions & Implementations
+
+#### 1.1 Automated WAN Mode 1 Fallback on Proxmox Shutdown
+- **Problem:** If Proxmox powers down (either due to the midnight power-schedule or battery discharging $\le 40\%$) while in Mode 2 (VM Main), the home LAN loses PPPoE connectivity until 7:00 AM.
+- **Decision:** Updated `/usr/local/bin/power-manager.sh` on Proxmox to execute `revert_wan_mode` (`curl -s -m 8 "http://192.168.1.130/api/set?mode=1"`) before all `shutdown` calls.
+- **Result:** Physical router always resumes active PPPoE dialing before the OpenWrt VM powers down.
+
+#### 1.2 Storage Bind-Mount Architecture (Eliminating Network Pinholes)
+- **Problem:** Torrents and indexers (`*Arr` / `qBittorrent` in `vmbr4`) need to transfer downloaded files to the NAS and notify Jellyfin in `vmbr1`. Opening Samba/NFS ports across the firewall compromises the quarantine zone.
+- **Decision:** Utilize Proxmox host-level storage bind mounts (`/mnt/storage/media`).
+- **Result:** Files are written and read at native filesystem speeds without any cross-zone network traffic or open firewall ports.
+
+#### 1.3 Dedicated Management Bots Zone (`vmbr6` - `10.60.60.0/24`)
+- **Problem:** Placing Telegram bots in `vmbr4` (untrusted P2P zone) or `vmbr2` (public tunnel zone) compromises their security requirements.
+- **Decision:** Created dedicated bridge `vmbr6` (`10.60.60.0/24`) for administrative and automation bots. Default policy is drop toward all internal zones, with audited firewall pinholes permitted only for:
+  - Destination `192.168.1.1:22` (Router SSH management bot)
+  - Destination `10.20.20.11:8085` (Vaultwarden invitation API)
+
+#### 1.4 Vaultwarden Admin Confinement
+- **Decision:** Confined Vaultwarden `/admin` strictly to local IPs (`10.10.10.0/24`, `10.20.20.0/24`, `192.168.1.0/24`). Tailscale and public Cloudflare tunnel access to `/admin` are completely blocked with hard 404 responses.
+
+#### 1.5 Wi-Fi Parental Controls via MAC Allowlist
+- **Decision:** The physical router applies default content and time restrictions across the entire wireless network (affecting guest and parents' repeater devices). Authorized devices (My Phone, PC, Laptop) are placed on an explicit MAC allowlist that bypasses the restriction policy.
+
+#### 1.6 Environment Secret Sanitization
+- **Decision:** Sanitized all literal Cloudflare Zone, Account, and Tunnel UUIDs as well as hardware MAC addresses into a gitignored root `.env` file, with a documented `.env.example` template committed to Git.
 
 ---
 
