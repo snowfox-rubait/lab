@@ -106,7 +106,10 @@ All homelab services live behind the OpenWrt VM, partitioned by protocol, access
 - **Hosted Services:**
   - `Tor Node`: Anti-censorship relay / bridge (`obfs4`)
   - `*Arr Stack & qBittorrent`: Media indexers and P2P downloaders (bound to VPN).
-  - **Storage Architecture:** Media is written to host-level shared storage via Proxmox bind mounts (`/mnt/storage/media`), eliminating the need for network file-sharing pinholes into `vmbr1`.
+  - **Storage Architecture & Privilege Separation:**
+    - Download cache: `/mnt/storage/downloads` $\rightarrow$ Mounted Read/Write into `qBittorrent` and `*Arr`.
+    - Final Media Library: `/mnt/storage/media` $\rightarrow$ Mounted Read-Only (`ro=1`) into `Jellyfin` and general NAS shares.
+    - Prevents any compromised downloader in `vmbr4` from tampering with or destroying the main media or photo library.
 - **Firewall Policy:** Drop all packets destined for `vmbr0`, `vmbr1`, `vmbr2`, `vmbr3`, `vmbr5`, or `vmbr6`. Completely quarantined.
 
 ### 3.5 Zone 5: Protocol Direct DMZ (`vmbr5` - `10.50.50.0/24`)
@@ -125,9 +128,11 @@ All homelab services live behind the OpenWrt VM, partitioned by protocol, access
 - **Hosted Services:**
   - `Router Controller Bot`: Telegram bot managing physical router and VM link states.
   - `Vaultwarden Onboarding Bot`: Bot automating pay-to-invite onboarding.
-- **Firewall Policy:** Default drop toward all zones; explicit pinholes permitted only for:
-  - Destination `192.168.1.1:22` (Router SSH execution)
-  - Destination `10.20.20.11:8085` (Vaultwarden API)
+- **Firewall Policy & Security Boundaries:**
+  - Default drop toward all zones; explicit pinholes permitted only for:
+    - Destination `192.168.1.1:22` (Router SSH restricted via forced-command script)
+    - Destination `10.20.20.11:8085` (Vaultwarden API: `POST /admin/invite` with admin token)
+  - **SSH Hard Boundary Enforcement:** Dropbear on the router enforces `command="/usr/bin/bot-command-wrapper",no-pty,restrict` on the bot's public key, preventing any interactive root shell, PPPoE password reads, or factory resets.
 
 ---
 

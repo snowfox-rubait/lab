@@ -84,7 +84,7 @@ By exploiting 802.1Q VLAN tagging on the Archer C6's MT7530 switch and Proxmox L
 - Permanent static lease added for OpenWrt VM on physical router (`bc:24:11:d4:16:9f` ➔ `192.168.1.129`).
 - Created `/usr/bin/wan-mode` script on the physical router to toggle between:
   - **Mode 1:** Physical Router Main.
-  - **Mode 2:** OpenWrt VM Main (with 90s self-healing watchdog).
+  - **Mode 2:** OpenWrt VM Main (with 45s self-healing watchdog).
   - **Mode 3:** Dual Active PPPoE over shared ONU.
 - Created local shortcut `~/.local/bin/wan-mode` on workstation PC for instant terminal control.
 

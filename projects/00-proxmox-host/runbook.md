@@ -112,12 +112,12 @@ Managed by `/usr/local/bin/power-manager.sh` and `/etc/cron.d/power-manager`.
 Linux network drivers frequently disable Wake-on-LAN by default (`Wake-on: d`).
 To enable waking the laptop over Ethernet:
 
-- **Interface:** `enp12s0` (MAC `b8:88:e3:e7:5e:1f`)
+- **Interface:** `enp12s0` (MAC mapped via `MAC_PROXMOX_BUILTIN` in `.env`)
 - **Mode:** Magic Packet (`g`)
 - **Systemd Service:** `/etc/systemd/system/wol.service` (Ensures `ethtool -s enp12s0 wol g` is set on every system boot).
 - **Trigger Command from Router:**
   ```bash
-  ssh router "/usr/bin/etherwake -D -i br-lan b8:88:e3:e7:5e:1f"
+  ssh router "/usr/bin/etherwake -D -i br-lan \$(grep MAC_PROXMOX_BUILTIN /etc/homelab.env | cut -d= -f2)"
   ```
 
 ---
@@ -133,7 +133,17 @@ To guarantee the laptop wakes up at 7:00 AM regardless of motherboard S5 power s
 - **Primary Wake Engine (Physical Router OpenWrt):**
   The Archer C6 router is always on (24/7). A cron job triggers at 7:00 AM sharp to send a Wake-on-LAN Magic Packet:
   ```cron
-  0 7 * * * /usr/bin/etherwake -i br-lan b8:88:e3:e7:5e:1f
+  0 7 * * * /usr/bin/etherwake -i br-lan <MAC_PROXMOX_BUILTIN>
   ```
 - **Secondary Wake Engine (Host `rtcwake`):**
   Sets the hardware RTC alarm at midnight shutdown as an internal fallback.
+
+---
+
+## 📱 Mobile Device Wi-Fi MAC Randomization Notice
+> [!IMPORTANT]
+> Modern Android (10+) and iOS (14+) enable **MAC Address Randomization** by default per SSID.
+> If a client device connects with a randomized MAC, it will not match the physical router's MAC allowlist and will automatically fall into the restricted parental control policy.
+> - **Required Device Setting for Allowlist Exemption:**
+>   - Android: `Settings` $\rightarrow$ `Wi-Fi` $\rightarrow$ `[Home Network]` $\rightarrow$ `Privacy` $\rightarrow$ Select **"Use device MAC"**.
+>   - iOS: `Settings` $\rightarrow$ `Wi-Fi` $\rightarrow$ `(i)` next to network $\rightarrow$ Toggle **"Private Wi-Fi Address"** to **Off**.

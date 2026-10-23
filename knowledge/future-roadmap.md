@@ -64,20 +64,22 @@
 
 | Service | Best Execution Platform | Target Network Zone | Complexity |
 | :--- | :--- | :--- | :--- |
-| **n8n Automation Engine** | Docker / Debian LXC | Safe Zone (`vmbr1`) | Low |
-| **Mermaid Diagram Server**| Docker / Debian LXC | Safe Zone (`vmbr1`) | Low |
-| **MQTT Broker (Mosquitto)**| Debian / Alpine LXC | Safe Zone (`vmbr1`) | Low |
-| **DB Backup Sync (Neon/Supa)**| Python / Bash Cron LXC | Safe Zone (`vmbr1`) | Low |
-| **Gitea** | Debian LXC (Docker / Binary) | Safe Zone (`vmbr1`) | Low |
-| **Headscale** | Debian LXC | Safe Zone (`vmbr1`) | Medium |
-| **Pi-hole** | LXC or OpenWrt Native | Home LAN (`vmbr0`) | Low |
-| **IPv6 + DDNS** | OpenWrt Native | WAN / Safe Zone | Medium |
-| **Fail2ban** | Host & Nginx LXC | Safe Zone (`vmbr1`) | Low |
-| **Immich** | Docker LXC + GPU passthrough | Safe Zone (`vmbr1`) | Medium |
-| **Home Assistant** | Dedicated Proxmox VM / LXC | Safe Zone (`vmbr1`) | Medium |
-| **File Browser / NAS** | Debian LXC + Disk Passthrough| Safe Zone (`vmbr1`) | Low |
-| **qBittorrent + Arr** | Docker LXC + WireGuard VPN | Not-Sure Zone (`vmbr3`)| Medium |
-| **Kiwix** | Docker LXC | Safe Zone (`vmbr1`) | Low |
-| **BookStack** | Docker LXC (PHP/MariaDB) | Safe Zone (`vmbr1`) | Low |
-| **Tor obfs4 Bridge** | Debian LXC | Not-Sure Zone (`vmbr3`)| Medium |
-| **Asterisk / FreePBX** | Dedicated VM / Debian LXC | Safe Zone (`vmbr1`) | High |
+| **n8n Automation Engine** | Docker / Debian LXC | Safe Internal (`vmbr1`) | Low |
+| **Mermaid Diagram Server**| Docker / Debian LXC | Safe Internal (`vmbr1`) | Low |
+| **Central DB (PostgreSQL)**| Debian LXC | Safe Internal (`vmbr1`) | Medium |
+| **DB Backup Sync (Neon/Supa)**| Python / Bash Cron LXC | Safe Internal (`vmbr1`) | Low |
+| **Gitea** | Debian LXC (Docker / Binary) | Safe Internal (`vmbr1`) | Low |
+| **Immich** | Docker LXC + GPU passthrough | Safe Internal (`vmbr1`) | Medium |
+| **File Browser / NAS** | Debian LXC + Disk Passthrough| Safe Internal (`vmbr1`) | Low |
+| **Kiwix (Offline ZIM)** | Docker LXC | Safe Internal (`vmbr1`) | Low |
+| **BookStack** | Docker LXC (PHP/MariaDB) | Safe Internal (`vmbr1`) | Low |
+| **Vaultwarden** | Docker / Debian LXC | Public Ingress (`vmbr2`) | Medium |
+| **Headscale** | Debian LXC | Public Ingress (`vmbr2`) | Medium |
+| **Home Assistant Core** | Dedicated Proxmox VM / LXC | Home Assistant & IoT (`vmbr3`) | Medium |
+| **MQTT Broker (Mosquitto)**| Debian / Alpine LXC | Home Assistant & IoT (`vmbr3`) | Low |
+| **qBittorrent + *Arr Stack** | Docker LXC + VPN + Host Mount | Unsafe Online (`vmbr4`)| Medium |
+| **Tor obfs4 Bridge** | Debian LXC | Unsafe Online (`vmbr4`)| Medium |
+| **Asterisk / FreePBX** | Dedicated VM / Debian LXC | Protocol DMZ (`vmbr5`) | High |
+| **Self-Hosted Mail** | Debian LXC (Postfix/Dovecot) | Protocol DMZ (`vmbr5`) | High |
+| **Router & Onboarding Bots** | Python LXC | Management Bots (`vmbr6`) | Low |
+| **Pi-hole DNS Sinkhole** | LXC or OpenWrt Native | Home LAN / OOB (`vmbr0`) | Low |

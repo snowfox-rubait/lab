@@ -10,7 +10,7 @@
 ## 🎯 Executive Summary & Objectives
 Vaultwarden is our self-hosted, Bitwarden-compatible password manager. Because it holds critical secrets, passwords, and 2FA credentials, it requires maximum security hardening:
 1. **Zero Open Router Ports:** Exposed to the internet exclusively via an encrypted Cloudflare Tunnel (`cloudflared`).
-2. **Hardened Admin Isolation:** The `/admin` portal is completely blocked and returns `404 Not Found` on the public Cloudflare tunnel, and is accessible only through a dedicated internal listener (LAN/Tailscale).
+2. **Hardened Admin Isolation:** The `/admin` portal is completely blocked and returns `404 Not Found` on the public Cloudflare tunnel, and is accessible only through a dedicated internal listener on local LAN.
 3. **Monetized Onboarding (bKash / Nagad):** Public registration is disabled; users cannot create an account without payment verification.
 
 ---
@@ -36,10 +36,10 @@ Vaultwarden is our self-hosted, Bitwarden-compatible password manager. Because i
        │     location / { proxy_pass http://vaultwarden_backend; }
        │     Inject Security Headers (HSTS, CSP with wasm-unsafe-eval, X-Frame-Options: DENY)
        │
-[ Internal Tailscale / LAN Ingress ]
+[ Internal LAN Ingress (Workstation / Safe Zone Only) ]
        │
-       ▼ (Private Management Server Block)
-       ├── location /admin { allow 10.10.10.0/24; allow 192.168.1.0/24; allow 100.64.0.0/10; deny all; proxy_pass ...; }
+       ▼ (Private Management Server Block - Port 8443)
+       ├── location /admin { allow 192.168.1.197; allow 10.10.10.0/24; deny all; proxy_pass ...; }
        │
        ▼ (Plain HTTP / Loopback)
 [ Vaultwarden Container (10.20.20.11:8085) ]
@@ -56,11 +56,11 @@ Because your users and customers are in Bangladesh, Vaultwarden should not be re
   - *Expression:* `(http.host eq "vault.snowfox.live" and ip.geoip.country ne "BD")`
   - *Action:* **Block** (or Managed Challenge).
 - **Benefit:** Traffic from any country other than Bangladesh is dropped immediately at Cloudflare's nearest edge data center before it ever touches your tunnel or server bandwidth.
-- **Exceptions:** If you travel abroad, you can still access your vault via Tailscale (`100.64.0.0/10`) without touching the public edge.
+- **Exceptions:** If you are outside Bangladesh, access is managed through authenticated WireGuard/VPN rather than public edge relaxation.
 
 ### 2. Admin Portal Lockdown (`/admin`)
 - **Public Behavior (Cloudflare Tunnel Listener):** Hard 404 response. Because Cloudflare Tunnel ingress arrives locally from the tunnel daemon (`10.20.20.10`), relying on client IP checks on the public block is bypassable. Therefore, the public-facing server block returns an unconditional `404` for `/admin`.
-- **Private Behavior (Internal / Tailscale Listener):** Served on a separate private listener or authenticated Tailscale mesh where `/admin` is forwarded to Vaultwarden backend with strict internal IP allowlists.
+- **Private Behavior (Internal LAN Listener):** Served on a separate private listener (`:8443`) restricted strictly to the administrator's workstation IP (`192.168.1.197/32`) and Safe Zone (`10.10.10.0/24`). Tailscale, public internet, and unprivileged container IPs receive an immediate `deny`.
 
 ```nginx
 # --- Public Server Block (Port 80/443 for Cloudflare Tunnel) ---
@@ -86,11 +86,10 @@ server {
     listen 10.20.20.10:8443 ssl;
     server_name vault-internal.snowfox.live;
 
-    # Strictly local access only (no Tailscale or public WAN)
+    # Strictly local administrator workstation & safe zone only
     location /admin {
+        allow 192.168.1.197/32;
         allow 10.10.10.0/24;
-        allow 10.20.20.0/24;
-        allow 192.168.1.0/24;
         deny all;
 
         proxy_pass http://vaultwarden_backend;
@@ -152,7 +151,7 @@ sequenceDiagram
     Customer->>Bot: Submits Email Address + bKash Transaction ID (TrxID)
     Bot->>Admin: Sends Instant Alert: "New Order! Email: x@gmail.com, TrxID: 9X32..."
     Admin->>Admin: Verifies money in bKash app
-    Admin->>Admin: Opens private admin panel (/admin via Tailscale)
+    Admin->>Admin: Opens private admin panel (/admin via Local LAN)
     Admin->>VW: Generates invitation / sends tokenized invite
     VW-->>Customer: Official tokenized registration link delivered
     Customer->>VW: Clicks secure link & sets master password!

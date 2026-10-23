@@ -182,7 +182,7 @@ flowchart TD
 ### 2. Per-Zone Nginx Reverse Proxies & WAN Dashboard
 - **Directory:** `projects/02-per-zone-nginx-proxies/`
 - **Documentation:** [[lab/projects/02-per-zone-nginx-proxies/README|Per-Zone Nginx Reverse Proxy Architecture]]
-- **Current Component:** `nginx-home` (LXC 200, `192.168.1.130`) hosting the WAN Controller WebUI dashboard.
+- **Current Component:** `wan-controller` (LXC 200, `192.168.1.130`) hosting the WAN Controller WebUI dashboard.
 
 ### 3. Vaultwarden Production Service & Monetization
 - **Directory:** `projects/03-vaultwarden-service/`
