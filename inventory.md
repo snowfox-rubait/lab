@@ -18,8 +18,8 @@
 
 ## 🔌 Hardware Workbench & Microcontrollers
 
-- **ESP32 Dev Boards** (Wi-Fi + BLE IoT prototyping)
-- **ESP8266 Dev Boards** (Wi-Fi low-cost IoT nodes)
+- **ESP32 Dev Boards** (Wi-Fi + BLE IoT prototyping - MAC tracked in `.env`)
+- **ESP8266 Dev Boards** (Wi-Fi low-cost IoT nodes - MAC tracked in `.env`)
 - **Arduino Uno** (Microcontroller experimentation)
 - **USB Video Capture Card** (Video ingest / streaming / monitoring)
 - **HDMI Splitter** (Display signal duplicating)
@@ -64,7 +64,7 @@ The HP EliteDesk Mini PC currently runs several local services:
 | **Home LAN / OOB**          | `vmbr0` / `br-lan` | `192.168.1.1` | Wi-Fi devices, PC, Proxmox host management, LXC 200, Pi-hole  |
 | **Safe (Internal)**         | `vmbr1` / `eth1`   | `10.10.10.1`  | Central DB, DBBackup, Gitea, Immich, NAS, n8n, BookStack      |
 | **Safe (Public Ingress)**   | `vmbr2` / `eth2`   | `10.20.20.1`  | Vaultwarden, Headscale (via Cloudflare Tunnel)                |
-| **Home Assistant (IoT)**    | `vmbr3` / `eth3`   | `10.30.30.1`  | Home Assistant core, Mosquitto MQTT & IoT sensors (Tailscale) |
+| **Home Assistant (IoT)**    | `vmbr3` / `eth3`   | `10.30.30.1`  | Home Assistant core, Mosquitto MQTT & IoT sensors (VLAN 30 / Tailscale) |
 | **Unsafe (Online / Lab)**   | `vmbr4` / `eth4`   | `10.40.40.1`  | Tor obfs4, *Arr stack, qBittorrent (storage via host mount)   |
 | **DMZ (Direct Ingress)**    | `vmbr5` / `eth5`   | `10.50.50.1`  | Asterisk/FreePBX VoIP, Self-Hosted Mail (Fail2ban, raw ports) |
 | **Management Bots**         | `vmbr6` / `eth6`   | `10.60.60.1`  | Isolated Telegram & automation bots with audited pinholes     |
@@ -82,3 +82,5 @@ The HP EliteDesk Mini PC currently runs several local services:
 | **Proxmox USB Adapter (`eth4`)** | `MAC_PROXMOX_USB` | Dynamic / WAN | USB-Ethernet swing WAN |
 | **ThinkPad Wi-Fi (`wlp3s0`)** | `MAC_PROXMOX_WIFI` | `192.168.1.153` | Internal wireless card (standby) |
 | **Main Workstation PC** | `MAC_MAIN_PC` | `192.168.1.197` | HP EliteDesk Mini PC |
+| **ESP32 Dev Board** | `MAC_ESP32` | `10.30.30.10` / Dynamic | IoT Sensor / ESPHome Node (VLAN 30) |
+| **ESP8266 Dev Board** | `MAC_ESP8266` | `10.30.30.11` / Dynamic | IoT Sensor Node (VLAN 30) |

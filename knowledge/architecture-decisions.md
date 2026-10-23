@@ -7,6 +7,62 @@
 ## 📑 ADR Index
 - [[#ADR-001 Master Topology Refinement and Ingress Egress Realignment]] *(2026-10-23)*
 - [[#ADR-002 Fail-Safe Mode 1 Shutdown, Storage Bind Mounts, and Management Bots Zone]] *(2026-10-23)*
+- [[#ADR-003 Isolated Low-Power IoT Wireless Tier, MAC Allowlisting, and MQTT Telemetry Routing]] *(2026-10-23)*
+
+---
+
+## ADR-003: Isolated Low-Power IoT Wireless Tier, MAC Allowlisting, and MQTT Telemetry Routing
+
+- **Date:** 2026-10-23
+- **Status:** Approved
+- **Scope:** Physical Archer C6 wireless AP, 2.4GHz radio tuning, hardware MAC association filtering, zero-trust guest-style network isolation, and telemetry delivery to Mosquitto MQTT in `vmbr3`.
+
+---
+
+### 1. Context & Problem Statement
+The homelab workbench includes two microcontrollers (ESP32 and ESP8266) intended for telemetry, sensor reading, and automation. Microcontroller devices operate strictly on 2.4GHz Wi-Fi, often run bare-metal or lightweight firmware lacking full TLS crypto acceleration, and are prone to firmware exploits if left unsegmented.
+
+Key architectural risks and challenges identified:
+1. **Lateral Movement:** If placed on the default home Wi-Fi (`192.168.1.0/24`), a compromised microcontroller can probe the main workstation PC, Proxmox hypervisor, and router administration portals.
+2. **RF Attack Surface:** High-power Wi-Fi broadcasts far beyond the physical room/workbench, enabling remote eavesdropping or de-authentication attacks.
+3. **Rogue Associations:** Relying solely on a WPA2 PSK allows any user with the password to connect rogue devices into the IoT tier.
+4. **Broker Reachability:** The Mosquitto MQTT broker is designated to run in Proxmox within the isolated `vmbr3` zone (`10.30.30.0/24`). A secure, low-overhead transport path is required between physical Wi-Fi on the Archer C6 and virtual containers on Proxmox.
+
+---
+
+### 2. Architectural Decisions & Implementations
+
+#### 2.1 Dedicated Low-TX 2.4GHz Wireless Tier (`snowfox-iot`)
+- **Action:** Created a secondary Virtual Access Point (VAP) on the Archer C6 `radio0` (2.4GHz).
+- **Settings:**
+  - Dedicated SSID: `snowfox-iot` (or `Rubait_IoT`).
+  - Reduced Transmission Power: Configured with low TX power (`option txpower 10` dBm / ~10mW) to constrain the RF footprint strictly to the workbench area.
+  - Client Isolation: Enabled Layer-2 client isolation (`option isolate 1`), preventing connected microcontrollers from directly communicating with or scanning each other.
+
+#### 2.2 Layer-2 Hardware MAC Allowlisting
+- **Action:** Configured 802.11 MAC filtering directly at the Wi-Fi interface level:
+  - Policy: `option macfilter 'allow'`
+  - Allowlist: Pinned exclusively to the hardware MAC addresses of the ESP32 and ESP8266 (tracked in `.env`).
+- **Result:** Any unauthorized device attempting to associate with `snowfox-iot` is dropped at the 802.11 Layer-2 association phase before DHCP or ARP are ever initiated.
+
+#### 2.3 Zero-Trust Guest-Style Firewall Isolation
+- **Action:** Bound the IoT wireless interface to a dedicated OpenWrt firewall zone (`iot`).
+- **Policy:**
+  - `input`: `REJECT` (Only DHCP UDP 67 and local DNS UDP 53 permitted; Dropbear SSH port 22 and LuCI HTTP/HTTPS port 80/443 strictly blocked).
+  - `forward`: `REJECT` (Completely drops all traffic destined for Home LAN `192.168.1.0/24`, router management, or other service bridges).
+  - Internet / WAN: Blocked by default, with optional UDP 123 NTP pinhole if local real-time clocks require time synchronization.
+
+#### 2.4 Telemetry Routing to Mosquitto MQTT (`vmbr3`)
+- **Action:** Connect physical IoT traffic to the Mosquitto broker in `vmbr3` (`10.30.30.0/24`):
+  - **Primary Model (802.1Q VLAN 30 Trunking - Recommended):** Extend the single-cable trunk architecture proven in EXP-002 (`lan3.100`) by creating `lan3.30` on Archer C6 and `enp12s0.30` on Proxmox bridged into `vmbr3`. The IoT wireless interface bridges directly into `vmbr3`, placing microcontrollers on the `10.30.30.0/24` subnet where they talk directly to Mosquitto (`10.30.30.10:1883`) without NAT or routing latency.
+  - **Fallback Model (L3 Routed Subnet):** Archer C6 hosts `192.168.30.0/24` locally and uses an explicit firewall pinhole forwarding TCP 1883 to OpenWrt VM (`192.168.1.129`), which routes into `vmbr3`.
+
+---
+
+### 3. Consequences & Impact
+- **Maximum Isolation:** Microcontrollers cannot reach the home LAN, cannot access router admin panels, cannot reach the internet, and cannot inspect adjacent IoT nodes.
+- **Physical Containment:** Low transmission power limits eavesdropping range.
+- **Architectural Uniformity:** Direct VLAN trunking into `vmbr3` keeps all zone firewall policies centralized within OpenWrt VM.
 
 ---
 

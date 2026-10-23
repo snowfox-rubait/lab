@@ -33,6 +33,10 @@ flowchart TD
 
         Router -->|MAC Allowlist / Unrestricted| MyPhone["My Phone"]
         Router -->|Wired LAN / Unrestricted| PC["HP EliteDesk PC"]
+
+        Router -->|Dedicated 2.4GHz Low-TX SSID<br/>MAC Allowlist + L2 Isolation| IoT_WiFi["Isolated IoT Wi-Fi<br/>snowfox-iot"]
+        IoT_WiFi --> ESP32["ESP32 Dev Board"]
+        IoT_WiFi --> ESP8266["ESP8266 Dev Board"]
     end
 
     %% ==================================================
@@ -159,7 +163,8 @@ flowchart TD
     end
 
     %% Physical router to Proxmox
-    Router -->|LAN cable| PhysicalNIC
+    Router -->|Trunk Cable: Untagged LAN + VLAN 100 WAN + VLAN 30 IoT| PhysicalNIC
+    IoT_WiFi -.->|802.1Q VLAN 30 Trunk / MQTT:1883 Telemetry| ZoneHA
 ```
 
 ---

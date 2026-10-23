@@ -93,11 +93,15 @@ All homelab services live behind the OpenWrt VM, partitioned by protocol, access
 ### 3.3 Zone 3: Home Assistant & IoT (`vmbr3` - `10.30.30.0/24`)
 - **Gateway:** `10.30.30.1` (OpenWrt `eth3`)
 - **Reverse Proxy:** **None** (Home Assistant has native Tailscale integration).
-- **Access Model:** Tailscale mesh for remote control + local IoT devices.
+- **Access Model:** Tailscale mesh for remote control + local IoT devices via dedicated 2.4GHz Wi-Fi (`snowfox-iot` via 802.1Q VLAN 30 trunk).
 - **Hosted Services:**
   - `Home Assistant Core` and smart home integrations (Zigbee, Matter, ESPHome).
   - `Local MQTT Broker (Mosquitto)`: Dedicated message broker for local ESP32/ESP8266 telemetry.
-- **Firewall Policy:** Isolated from internal data storage (`vmbr1`). Home Assistant can poll IoT endpoints, but IoT devices cannot reach any other zone.
+- **Physical Ingress & Security Policy (ADR-003):**
+  - Physical Archer C6 router broadcasts dedicated 2.4GHz SSID with reduced TX power (10 dBm) and client isolation (`isolate '1'`).
+  - Strict Layer-2 802.11 MAC filtering allowlist exclusively for ESP32 and ESP8266 hardware MACs (tracked in `.env`).
+  - Bridged into `vmbr3` via 802.1Q VLAN 30 over the existing inter-router trunk link.
+  - Zero access to Home LAN (`vmbr0`), router admin (SSH/LuCI), internal storage (`vmbr1`), or external WAN (optional UDP 123 NTP). IoT microcontrollers can only publish/subscribe to Mosquitto (`10.30.30.10:1883`).
 
 ### 3.4 Zone 4: Unsafe / Online Workloads (`vmbr4` - `10.40.40.0/24`)
 - **Gateway:** `10.40.40.1` (OpenWrt `eth4`)
