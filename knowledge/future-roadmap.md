@@ -4,6 +4,88 @@
 
 ---
 
+## 🗺️ Target Network & Service Topology
+*See also: [[lab/README#🗺️ Master Network & Service Architecture|Master Architecture in README]]*
+
+```mermaid
+flowchart TD
+    subgraph PhysicalWAN ["Physical & Ingress Network"]
+        ISP["ISP"] --> ONU["ONU"]
+        ONU --> C{"Physical Router (OpenWrt Archer C6)"}
+        C -->|Parental Control / Isolated| Repeater["Wi-Fi Repeater"]
+        Repeater --> Dad["Dad's Phone"]
+        Repeater --> Mom["Mom's Phone"]
+        C --> MyPhone["My Phone"]
+        C --> PC["HP EliteDesk PC"]
+    end
+
+    subgraph ProxmoxHost ["Proxmox VE Hypervisor (ThinkPad Laptop)"]
+        direction TB
+        PVE["Proxmox Host (PVE OS)<br/>Tailscale | CrowdSec / Fail2ban"]
+        C ---|Physical NIC vmbr0| PVE
+
+        subgraph OutOfBand ["Out-of-Band Management (vmbr0 - 192.168.1.0/24)"]
+            LXC200["LXC 200: WAN Controller Web UI"]
+            PiHoleOOB["LXC: Pi-hole DNS Sinkhole"]
+        end
+        PVE --- OutOfBand
+
+        N{"OpenWrt VM (Core Router)"}
+        PVE --- N
+        
+        USB_NIC["USB-to-Ethernet Adapter"] -.->|Passthrough when needed| N
+        USB_NIC -.->|Manual Secondary WAN| ONU
+
+        subgraph Bridges ["Proxmox Internal Bridges (OpenWrt VM Segments)"]
+            direction TB
+            subgraph ZoneSafe ["Safe Zone (vmbr1 - Not Exposed to Internet)"]
+                NG_Safe["Nginx Safe + Tailscale + CF DNS (Gray Proxy)"]
+                Z["Central Database (PostgreSQL/Redis)"]
+                NG_Safe --> Z
+                NG_Safe --> n8n["n8n Automation"]
+                NG_Safe --> Gitea["Gitea"]
+                NG_Safe --> Immich["Immich"]
+                NG_Safe --> NAS["HDD NAS / FileBrowser"]
+                NG_Safe --> Bookstack["Bookstack"]
+                NG_Safe --> Kiwix["Kiwix (Offline ZIM)"]
+                NG_Safe --> Jellyfin["Jellyfin / Plex"]
+            end
+
+            subgraph ZonePublicSafe ["Safe Public Zone (Cloudflare Tunnel - Orange Proxy)"]
+                NG_Pub["Nginx Public + CF Tunnel"]
+                NG_Pub --> Vaultwarden["Vaultwarden"]
+                NG_Pub --> Headscale["Headscale Control Plane"]
+                NG_Pub --> DB_Backup["DB Backup (Neon / Supabase)"]
+                NG_Pub --> Mail["Self-Hosted Mail"]
+                NG_Pub --> Telegram["Telegram Bots & Webhooks"]
+            end
+
+            subgraph ZoneHA ["Home Assistant Zone (Dedicated Bridge / VLAN)"]
+                HA["Home Assistant Core & Integrations<br/>Native Tailscale"]
+            end
+
+            subgraph ZoneUnsafe ["Unsafe Zone (Tor / Torrent / Ingress)"]
+                NG_Unsafe["Isolated Gateway"]
+                NG_Unsafe --> Tor["Tor Node (obfs4)"]
+                NG_Unsafe --> ArrStack["*Arr Stack & qBittorrent"]
+                NG_Unsafe --> MQTT["Public MQTT Broker"]
+            end
+
+            subgraph ZoneDMZ ["VoIP DMZ (Fail2ban Isolated)"]
+                Asterisk["Asterisk / FreePBX (VoIP / VoWiFi)"]
+            end
+        end
+
+        N --> ZoneSafe
+        N --> ZonePublicSafe
+        N --> ZoneHA
+        N --> ZoneUnsafe
+        N --> ZoneDMZ
+    end
+```
+
+---
+
 ## 🗄️ Storage & Media Management
 - **NAS & Hard Drive Management:**
   - Candidates: **File Browser** (lightweight web file manager), **OpenMediaVault (OMV)**, **TrueNAS SCALE**, **CasaOS / ZimaOS**.
