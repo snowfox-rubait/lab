@@ -37,7 +37,7 @@
   - Destination `10.20.20.11:8085` (Vaultwarden invitation API)
 
 #### 1.4 Vaultwarden Admin Confinement
-- **Decision:** Confined Vaultwarden `/admin` strictly to local IPs (`10.10.10.0/24`, `10.20.20.0/24`, `192.168.1.0/24`). Tailscale and public Cloudflare tunnel access to `/admin` are completely blocked with hard 404 responses.
+- **Decision:** Confined Vaultwarden `/admin` strictly to local administrator workstation (`192.168.1.197/32`) and Safe Zone (`10.10.10.0/24`). Tailscale, public Cloudflare tunnel, and unprivileged containers in `10.20.20.0/24` are completely blocked with hard 404 or immediate deny responses.
 
 #### 1.5 Wi-Fi Parental Controls via MAC Allowlist
 - **Decision:** The physical router applies default content and time restrictions across the entire wireless network (affecting guest and parents' repeater devices). Authorized devices (My Phone, PC, Laptop) are placed on an explicit MAC allowlist that bypasses the restriction policy.
