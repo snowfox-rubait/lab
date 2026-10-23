@@ -9,6 +9,7 @@ Welcome to the lab repository. This vault tracks all architecture experiments, f
 - 🧰 **Hardware & Assets Inventory:** [[inventory]] (Physical nodes, microcontrollers, cloud accounts, domain, and running services)
 - 💡 **Future Roadmap & Tech Backlog:** [[lab/knowledge/future-roadmap|future-roadmap]] (Gitea, Headscale, NAS, Immich, Pi-hole, IPv6/DDNS, Arr stack, Kiwix, Home Assistant, Tor, Asterisk/VoIP)
 - 📐 **Architecture Decisions (ADR):** [[lab/knowledge/architecture-decisions|architecture-decisions]] (Permanent logs of network topologies, bridge designs, and security models)
+- ⚠️ **Common Troubles & Quirks:** [[lab/knowledge/common-troubles|common-troubles]] (Hardware crash recovery, driver workarounds)
 - 🧠 **Mistakes to Avoid (Lessons Learned):** [[lab/knowledge/mistakes-to-avoid|mistakes-to-avoid]]
 - 🔧 **Troubleshooting Playbook:** [[lab/knowledge/troubleshooting-playbook|troubleshooting-playbook]]
 - 📝 **New Experiment Template:** [[lab/templates/experiment-template|experiment-template]]

@@ -87,12 +87,15 @@ Managed by `/usr/local/bin/power-manager.sh` and `/etc/cron.d/power-manager`.
 
 ## 🌉 Network Bridges Layout
 
-| Bridge  | Attached Physical Port   | Subnet / Role                             |
-| :------ | :----------------------- | :---------------------------------------- |
-| `vmbr0` | `enp12s0` (Built-in NIC) | Home LAN (`192.168.1.0/24`)               |
-| `vmbr1` | *None (isolated)*        | Safe Zone DMZ (`10.10.10.0/24`)           |
-| `vmbr2` | *None (isolated)*        | Malware / Unsafe Zone (`10.20.20.0/24`)   |
-| `vmbr3` | *None (isolated)*        | Not-Sure / Testing Zone (`10.30.30.0/24`) |
+| Bridge  | Attached Physical Port   | Subnet / Role                                                  |
+| :------ | :----------------------- | :------------------------------------------------------------- |
+| `vmbr0` | `enp12s0` (Built-in NIC) | Home LAN / Out-of-Band Management (`192.168.1.0/24`)           |
+| `vmbr1` | *None (isolated)*        | Safe Internal Zone (`10.10.10.0/24`)                           |
+| `vmbr2` | *None (isolated)*        | Safe Public Ingress Zone (`10.20.20.0/24`)                     |
+| `vmbr3` | *None (isolated)*        | Home Assistant & IoT Zone (`10.30.30.0/24`)                     |
+| `vmbr4` | *None (isolated)*        | Unsafe / Online Workloads Zone (`10.40.40.0/24`)               |
+| `vmbr5` | *None (isolated)*        | Direct Protocol Ingress DMZ (`10.50.50.0/24`)                  |
+| `vmbr100` | *None (isolated)*      | Dedicated WAN VLAN Trunk Bridge (VLAN 100 for VM PPPoE dialer) |
 
 ---
 

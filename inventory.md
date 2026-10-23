@@ -32,7 +32,7 @@
 - **GitHub Profile:** `snowfox-rubait`
   - Authentication: `git` and `gh` CLI fully authenticated locally.
 - **Apex Domain:** `snowfox.live`
-  - **Registrar / Expiry:** Registered 2026-03-17, Expires **2027-03-17** (~147 days remaining).
+  - **Registrar / Expiry:** Registered 2026-03-17, Expires **2027-03-17**.
   - **DNS & Edge:** Cloudflare Zone ID `bf2fea1c489c7d7d258011e77305d30b`, Account ID `cd241dca8e1b54b75d761bf0225ceea4`.
   - **IaC Tooling:** Terraform in `~/.cloudflare-terraform/` (Tunnel `snowfox-tunnel` ID: `c63f3937-1ec8-4d41-9a7b-f7cc99d37efd`).
   - **Current Live DNS Records:** None (Clean slate; old ZeroTier `openwrt` and idle tunnel CNAMEs destroyed via Terraform).

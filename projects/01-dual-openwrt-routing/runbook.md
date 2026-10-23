@@ -1,4 +1,10 @@
 
+# 📖 Routing Operations & wan-mode Runbook
+
+> **Scope:** Physical Router (`192.168.1.1`), OpenWrt VM (`192.168.1.129`), VLAN 100 trunking, and WAN Mode management.
+
+---
+
 ## ⏱️ Router Auto-Maintenance & Scheduled Reboots
 
 Due to known MediaTek MT7603E PCIe driver lockups after prolonged uptime, an automated 12-hour reboot schedule is enabled via cron.
@@ -7,7 +13,7 @@ Due to known MediaTek MT7603E PCIe driver lockups after prolonged uptime, an aut
 - **Cron Service:** Enabled and started (`/etc/init.d/cron`).
 - **Schedule:** `0 4,16 * * * /sbin/reboot`
   - Reboots at **4:00 AM** and **4:00 PM** local time daily.
-  - Mitigates wireless driver driver hang and clears hardware buffers proactively during off-peak hours.
+  - Mitigates wireless driver hang and clears hardware buffers proactively during off-peak hours.
 
 ---
 
@@ -30,7 +36,7 @@ wan-mode status
 # Switch to Mode 1 (Physical Router Main):
 wan-mode 1
 
-# Switch to Mode 2 (OpenWrt VM Main - armed with 90s safety auto-revert):
+# Switch to Mode 2 (OpenWrt VM Main - armed with 45s safety auto-revert):
 wan-mode 2
 
 # Switch to Mode 3 (Simultaneous Dual Active PPPoE over shared ONU):
@@ -46,7 +52,7 @@ When `wan-mode 2` is triggered:
 
 ---
 
-## 🖥️ WebUI WAN Controller Dashboard (LXC 200: `nginx-home`)
+## 🖥️ WebUI WAN Controller Dashboard (LXC 200: `wan-controller`)
 
 A dedicated container sits on the Home bridge (`vmbr0`) running Nginx and an interactive dashboard for checking telemetry and toggling WAN modes:
 

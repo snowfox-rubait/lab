@@ -1,5 +1,11 @@
 
-## 📶 MediaTek Wi-Fi MCU Firmware Crash (Archer C6 v3 / MT7603E)
+# ⚠️ Common Hardware, Driver & Network Troubles
+
+> **Scope:** Known quirks, firmware crash patterns, and quick recovery triggers across homelab nodes.
+
+---
+
+## 📶 MediaTek Wi-Fi MCU Firmware Crash (Archer C6 v3 / MT7603E & MT7615E)
 
 ### Symptoms:
 - 2.4 GHz Wi-Fi SSID disappears completely.
