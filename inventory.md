@@ -84,3 +84,76 @@ The HP EliteDesk Mini PC currently runs several local services:
 | **Main Workstation PC** | `MAC_MAIN_PC` | `192.168.1.197` | HP EliteDesk Mini PC |
 | **ESP32 Dev Board** | `MAC_ESP32` | `10.30.30.10` / Dynamic | IoT Sensor / ESPHome Node (VLAN 30) |
 | **ESP8266 Dev Board** | `MAC_ESP8266` | `10.30.30.11` / Dynamic | IoT Sensor Node (VLAN 30) |
+
+---
+
+## 🚦 Active Deployment & Service State Matrix
+
+> **Note for Any Agent / Auditor:** This matrix distinguishes what is **actively running right now** versus what is an **architectural target / planned phase**.
+
+| Service / Node | Platform | Network Location | Status | Current Details / Source Files |
+| :--- | :--- | :--- | :--- | :--- |
+| **Physical Gateway** | TP-Link Archer C6 v3 | `192.168.1.1` (LAN) | 🟢 **Live** | Mode 1 PPPoE, `wan-mode` script (`projects/01/scripts/wan-mode`), cron auto-reboot & 07:00 WOL |
+| **Proxmox Hypervisor** | ThinkPad Laptop | `192.168.1.2` (`vmbr0`) | 🟢 **Live** | PVE 9.2.2, kernel 7.0, `power-manager.sh` (`projects/00/scripts/power-manager.sh`), `wol.service` |
+| **Virtual Router (VM 100)** | OpenWrt 25.12.6 VM | `192.168.1.129` (`vmbr0`) | 🟢 **Live** | Standby `wan_vlan` (VLAN 100), gateway for `safe`, `unsafe`, and `notsure` zones |
+| **WAN Controller (LXC 200)**| Debian 12 LXC | `192.168.1.130` (`vmbr0`) | 🟢 **Live** | Nginx + Python API (`projects/01/wan-controller/app.py`), Web dashboard on port 80 |
+| **Local Mini PC Services** | Docker on HP EliteDesk | `192.168.1.197` (LAN) | 🟢 **Live** | SearXNG, Ollama LLM, n8n, local Vaultwarden container |
+| **IoT Wi-Fi (VLAN 30)** | Archer C6 `radio0` | `10.30.30.0/24` (`vmbr3`) | 🟡 **Ready** | Specification complete (`EXP-003`). Ready to deploy upon entering hardware MACs. |
+| **Reverse Proxies (LXC 201/202)**| Proxmox LXC | `vmbr1` / `vmbr2` | ⚪ **Planned** | Phase 2 target (`projects/02-per-zone-nginx-proxies`) |
+| **Vaultwarden Migration** | Proxmox LXC | `10.20.20.11` (`vmbr2`) | ⚪ **Planned** | Phase 3 target (`projects/03-vaultwarden-service`), replacing PC Docker instance |
+| **Central Database (PG/Redis)** | Proxmox LXC | `10.10.10.x` (`vmbr1`) | ⚪ **Planned** | Planned multi-tenant database for Gitea, Immich, Vaultwarden |
+| **Home Assistant Core** | Proxmox VM / LXC | `10.30.30.x` (`vmbr3`) | ⚪ **Planned** | Planned smart home hub with native Tailscale |
+| **Mosquitto MQTT Broker** | Proxmox LXC | `10.30.30.10` (`vmbr3`) | ⚪ **Planned** | Planned broker for ESP32/ESP8266 telemetry (`EXP-003`) |
+| **Management Bots (LXC)** | Proxmox LXC | `10.60.60.10` (`vmbr6`) | ⚪ **Planned** | Planned isolated bot container with forced-command SSH wrapper |
+
+---
+
+## 🔑 SSH Client Configuration Reference
+
+To replicate the management workstation's direct host access from any environment, configure `~/.ssh/config` as follows:
+
+```sshconfig
+Host proxmox
+    HostName 192.168.1.2
+    User root
+    Port 22
+    IdentityFile ~/.ssh/id_rsa_gemini_codeberg
+
+Host router
+    HostName 192.168.1.1
+    User root
+    Port 22
+
+Host openwrt-vm
+    HostName 192.168.1.129
+    User root
+    Port 22
+    IdentityFile ~/.ssh/id_rsa_gemini_codeberg
+
+Host phone
+    HostName 192.168.1.179
+    User u0_a344
+    Port 8022
+
+Host laptop
+    HostName 192.168.1.153
+    User haw
+    Port 22
+    IdentityFile ~/.ssh/id_rsa_gemini_codeberg
+```
+
+---
+
+## 🔄 OpenWrt VM Live Interface Name Mapping
+
+The OpenWrt VM (VM 100) was initially provisioned with transitional zone names. When interacting with UCI on VM 100, refer to this exact map:
+
+| UCI Network Name | Linux Interface | Proxmox Bridge | Subnet | Master Architectural Role |
+| :--- | :--- | :--- | :--- | :--- |
+| `network.homelan` | `eth0` | `vmbr0` | `192.168.1.129/24` | Out-of-Band Management & Physical LAN WAN link |
+| `network.safe` | `eth1` | `vmbr1` | `10.10.10.1/24` | Safe Internal Zone |
+| `network.unsafe` | `eth2` | `vmbr2` | `10.20.20.1/24` | Safe Public Ingress Zone (Vaultwarden / Tunnel) |
+| `network.notsure` | `eth3` | `vmbr3` | `10.30.30.1/24` | Home Assistant & IoT Zone (VLAN 30 Trunk) |
+| `network.wan_fiber`| `eth4` | USB NIC Passthrough| Dynamic PPPoE | Direct Fiber WAN (Emergency swing link) |
+| `network.wan_vlan` | `eth5` | `vmbr100` | Dynamic PPPoE | VLAN 100 Tagged PPPoE Dialer (Mode 2 / Mode 3) |
+

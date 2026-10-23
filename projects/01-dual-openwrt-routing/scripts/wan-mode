@@ -1,0 +1,72 @@
+#!/bin/sh
+# Multi-Mode WAN Controller for Dual OpenWrt & Shared ONU
+# Usage: wan-mode [1|2|3|status]
+
+MODE="$1"
+
+case "$MODE" in
+    1)
+        echo "=== Switching to MODE 1 (Physical Router Main) ==="
+        uci set network.wan.auto='1'
+        uci commit network
+        ifup wan
+        ssh -y -i /root/.ssh/id_dropbear root@192.168.1.129 "ifdown wan_vlan" 2>/dev/null || true
+        echo "Mode 1 active. Physical Router is dialing PPPoE."
+        ;;
+    2)
+        echo "=== Switching to MODE 2 (OpenWrt VM Main) with 45s Watchdog ==="
+        cp /etc/config/network /tmp/network.mode1.bak
+        
+        ifdown wan
+        uci set network.wan.auto='0'
+        uci commit network
+
+        ssh -y -i /root/.ssh/id_dropbear root@192.168.1.129 "ifup wan_vlan" 2>/dev/null || true
+
+        (
+            echo "[Watchdog] Waiting 45s for OpenWrt VM to establish WAN..."
+            sleep 45
+            if ping -c 3 1.1.1.1 >/dev/null 2>&1; then
+                echo "[Watchdog] Internet verified! Mode 2 successful."
+                rm -f /tmp/network.mode1.bak
+            else
+                echo "[Watchdog] WAN failed in Mode 2! Auto-reverting to Mode 1..."
+                ssh -y -i /root/.ssh/id_dropbear root@192.168.1.129 "ifdown wan_vlan" 2>/dev/null || true
+                cp /tmp/network.mode1.bak /etc/config/network
+                /etc/init.d/network reload
+                ifup wan
+                echo "[Watchdog] Reverted to Mode 1 successfully."
+            fi
+        ) > /tmp/wan-mode-watchdog.log 2>&1 &
+        
+        echo "Mode 2 initiated. Watchdog active in background (log: /tmp/wan-mode-watchdog.log)."
+        ;;
+    3)
+        echo "=== Switching to MODE 3 (Simultaneous Dual Active PPPoE) ==="
+        uci set network.wan.auto='1'
+        uci commit network
+        ifup wan
+        ssh -y -i /root/.ssh/id_dropbear root@192.168.1.129 "ifup wan_vlan" 2>/dev/null || true
+        echo "Mode 3 active. Both routers dialing over shared ONU bridge."
+        ;;
+    status|"")
+        echo "========================================"
+        echo "           WAN STATUS & MODES           "
+        echo "========================================"
+        ROUTER_WAN=$(ifstatus wan | grep -o '"up": true' || echo "down")
+        VM_WAN=$(ssh -y -i /root/.ssh/id_dropbear root@192.168.1.129 "ifstatus wan_vlan | grep -o '\"up\": true' || echo 'down'" 2>/dev/null)
+        echo "Physical Router WAN (br-wan): $ROUTER_WAN"
+        echo "OpenWrt VM WAN (VLAN 100):   $VM_WAN"
+        echo "Active Default Route:"
+        ip route | grep default
+        echo "========================================"
+        echo "Usage: wan-mode 1 (Physical Main)"
+        echo "       wan-mode 2 (VM Main - with auto-revert)"
+        echo "       wan-mode 3 (Dual Active PPPoE)"
+        ;;
+    *)
+        echo "Unknown mode: $MODE"
+        echo "Usage: wan-mode [1|2|3|status]"
+        exit 1
+        ;;
+esac

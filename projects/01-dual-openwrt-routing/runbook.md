@@ -26,7 +26,7 @@ Because the ThinkPad cuts off mechanical power to internal RTC wake pins in ACPI
 
 ## 🔀 Multi-Mode WAN Controller & Watchdog (`wan-mode`)
 
-The router features a unified mode switcher located at `/usr/bin/wan-mode`.
+The router features a unified mode switcher located at `/usr/bin/wan-mode` (source tracked in repo under [[scripts/wan-mode|scripts/wan-mode]]).
 
 ### Quick Commands:
 ```bash
@@ -54,7 +54,7 @@ When `wan-mode 2` is triggered:
 
 ## 🖥️ WebUI WAN Controller Dashboard (LXC 200: `wan-controller`)
 
-A dedicated container sits on the Home bridge (`vmbr0`) running Nginx and an interactive dashboard for checking telemetry and toggling WAN modes:
+A dedicated container sits on the Home bridge (`vmbr0`) running Nginx and an interactive dashboard for checking telemetry and toggling WAN modes (source files tracked in repo under [[wan-controller/app.py|wan-controller/app.py]], [[wan-controller/wan-webui.service|wan-webui.service]], and [[wan-controller/nginx-site.conf|nginx-site.conf]]):
 
 - **Access URL:** **`http://192.168.1.130/`**
 - **Container Specs:** Debian 12 LXC (ID 200, 1 Core, 512MB RAM, 4GB disk)

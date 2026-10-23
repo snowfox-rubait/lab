@@ -1,0 +1,4 @@
+# Check battery every 2 minutes
+*/2 * * * * root /usr/local/bin/power-manager.sh
+# Trigger midnight shutdown check at 00:00 sharp
+0 0 * * * root /usr/local/bin/power-manager.sh

@@ -64,7 +64,7 @@ Because this server is a laptop running with the lid closed, standard Linux powe
 
 ## 🌙 Automated Nightly Schedule & Battery Protection
 
-Managed by `/usr/local/bin/power-manager.sh` and `/etc/cron.d/power-manager`.
+Managed by `/usr/local/bin/power-manager.sh` and `/etc/cron.d/power-manager` (tracked in repo under [[scripts/power-manager.sh|scripts/power-manager.sh]] and [[services/power-manager.cron|services/power-manager.cron]]).
 
 ### Rules Configured:
 1. **Low Battery Auto-Shutdown (< 40% and Discharging):**
