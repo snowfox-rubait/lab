@@ -1,37 +1,40 @@
 # 🛡️ Per-Zone Reverse Proxy & Out-of-Band Management Architecture
 
 > **Project ID:** `02-per-zone-nginx-proxies`  
-> **Status:** Phase 1 Completed (`wan-controller` on vmbr0)  
-> **Architecture Principle:** Strict Network Segmentation via Isolated Reverse Proxies with Independent Out-of-Band Physical Management
+> **Status:** Phase 1 Completed (`wan-controller` on `vmbr0`)  
+> **Architecture Principle:** Strict Network Segmentation via Isolated Reverse Proxies with Independent Out-of-Band Physical Management  
+> **Authoritative ADR:** [[lab/knowledge/architecture-decisions#ADR-001 Master Topology Refinement and Ingress Egress Realignment|ADR-001 (Master Topology & Bridges)]]
 
 ---
 
 ## 🎯 1. Network Topology & Proxy Boundaries
 
-To maintain strict security and high availability, our network is partitioned into two distinct management realms:
+To maintain high availability and defense-in-depth, the network is partitioned into two distinct management realms:
 1. **Out-of-Band Physical Management (`vmbr0` / Home LAN):** Sits directly on the physical router's LAN. It does **not** rely on the OpenWrt VM. If the OpenWrt VM crashes, hangs, or is powered down, this out-of-band management interface remains 100% operational.
-2. **Per-Zone Virtual Proxies (`vmbr1`, `vmbr2`):** Governed strictly by the OpenWrt Firewall VM. Each security tier runs an isolated Nginx reverse proxy so a compromised service cannot bridge across network zones.
+2. **Per-Zone Virtual Security Segments (`vmbr1` through `vmbr5`):** Governed strictly by the OpenWrt VM (VM 100). Reverse proxies are only deployed in zones that genuinely require layer-7 HTTP/HTTPS ingress, preventing lateral movement across zones.
 
 ```
-                  ┌─────────────────────────────────────────────────────────┐
-                  │                 Physical Router (192.168.1.1)            │
-                  └────────────────────────────┬────────────────────────────┘
-                                               │
-                                 vmbr0 Physical LAN (192.168.1.0/24)
-                        ┌──────────────────────┴──────────────────────┐
-                        │                                             │
-               [ Out-of-Band Controller ]                    [ OpenWrt VM (VM 100) ]
-                 LXC 200 (192.168.1.130)                     WAN: 192.168.1.129
-                 (Independent Fail-safe)                               │
-                                            ┌─────────────────────────┼─────────────────────────┐
-                                            │ (vmbr1: Safe Internal)  │ (vmbr2: Public Safe)    │ (vmbr4: Unsafe / Online)
-                                            │ 10.10.10.0/24           │ 10.20.20.0/24           │ 10.40.40.0/24
-                                            ▼                         ▼                         ▼
-                                   [ nginx-safe (LXC 201) ]    [ nginx-public (LXC 202) ] [ Isolated / Direct Outbound ]
-                                   10.10.10.10                 10.20.20.10               (Tor, Arr Stack, Telegram)
-                                            │                         │
-                                   ┌────────┴────────┐       ┌────────┴────────┐
-                                    DB, n8n, NAS, Git         Vaultwarden, CF
+                              ┌─────────────────────────────────────────────────────────┐
+                              │                 Physical Router (192.168.1.1)            │
+                              └────────────────────────────┬────────────────────────────┘
+                                                           │
+                                             vmbr0 Physical LAN (192.168.1.0/24)
+                                    ┌──────────────────────┴──────────────────────┐
+                                    │                                             │
+                           [ Out-of-Band Controller ]                    [ OpenWrt VM (VM 100) ]
+                             LXC 200 (192.168.1.130)                     WAN: 192.168.1.129
+                             (Independent Fail-safe)                               │
+        ┌─────────────────────────┬─────────────────────────┬─────────────────────┼─────────────────────┐
+        │ vmbr1 (Safe Internal)   │ vmbr2 (Public Ingress)  │ vmbr3 (IoT / HA)    │ vmbr4 (Unsafe Online)│ vmbr5 (Protocol DMZ)
+        │ 10.10.10.0/24           │ 10.20.20.0/24           │ 10.30.30.0/24       │ 10.40.40.0/24       │ 10.50.50.0/24
+        ▼                         ▼                         ▼                     ▼                     ▼
+[ nginx-safe (LXC 201) ]   [ nginx-public (LXC 202) ]   [ Home Assistant ]   [ Direct Outbound NAT ] [ Direct Port DMZ ]
+ 10.10.10.10               10.20.20.10                   10.30.30.10          (No Ingress Proxy)     (No HTTP Proxy)
+        │                         │                         │                     │                     │
+┌───────┴────────┐       ┌────────┴────────┐       ┌────────┴────────┐   ┌────────┴────────┐   ┌────────┴────────┐
+Central DB, n8n,          Vaultwarden,              HA Core &             Tor obfs4, *Arr,      Asterisk FreePBX,
+Gitea, Immich, NAS,       Headscale Control         Zigbee/Matter         qBittorrent, MQTT,    Self-Hosted Mail
+BookStack, Kiwix          (Cloudflare Tunnel)       (Tailscale Native)    Telegram Polling      (Fail2ban)
 ```
 
 ---
@@ -39,10 +42,10 @@ To maintain strict security and high availability, our network is partitioned in
 ## 🖥️ 2. Out-of-Band Component: `wan-controller` (LXC 200 on `vmbr0`)
 
 ### 2.1 Why LXC 200 Lives on `vmbr0`
-- **Fail-safe Survival:** It directly communicates with the physical router (`192.168.1.1`). If the OpenWrt VM is completely dead or bricked during testing, you can still open `http://192.168.1.130/` from any phone or PC on the home Wi-Fi and switch WAN modes or view status.
-- **Role:** Pure physical infrastructure management (WAN Mode 1/2/3 switching & physical telemetry), NOT a public application proxy.
+- **Fail-safe Survival:** Communicates directly with the physical router (`192.168.1.1`). If the OpenWrt VM is completely dead, broken, or misconfigured during testing, you can still open `http://192.168.1.130/` from any phone or PC on the home Wi-Fi and switch WAN modes or inspect physical link state.
+- **Role:** Pure physical infrastructure management (WAN Mode 1/2/3 switching & physical telemetry), NOT an application proxy.
 
-### 2.2 Specifications
+### 2.2 Container Specifications
 - **Container ID:** `200`
 - **Hostname:** `wan-controller` (formerly `nginx-home`)
 - **OS Template:** Debian 12 (Bookworm) standard amd64
@@ -51,40 +54,69 @@ To maintain strict security and high availability, our network is partitioned in
 - **Static IP:** `192.168.1.130/24` (Gateway: `192.168.1.1`)
 - **Web Port:** `80` (HTTP)
 
-### 2.3 Internal Workflow
-1. User accesses **`http://192.168.1.130/`**.
-2. Nginx serves the responsive dashboard and proxies `/api/*` requests to an internal Python daemon on `127.0.0.1:8080`.
+### 2.3 Workflow
+1. Client accesses `http://192.168.1.130/`.
+2. Nginx serves the dashboard SPA and proxies `/api/*` to a local Python daemon on `127.0.0.1:8080`.
 3. The daemon uses automated passwordless SSH key authentication (`/root/.ssh/id_ed25519`) to execute `/usr/bin/wan-mode` on the physical router (`192.168.1.1`).
 
 ---
 
-## 🛡️ 3. Virtual Zone Proxies (Behind OpenWrt VM)
+## 🛡️ 3. Per-Zone Segments (Behind OpenWrt VM)
 
-All self-hosted homelab applications live strictly behind the OpenWrt VM:
+All homelab services live behind the OpenWrt VM, partitioned by protocol, access pattern, and threat profile:
 
-### 3.1 `nginx-safe` (LXC 201 on `vmbr1` - Safe Zone `10.10.10.0/24`)
-- **Role:** Reverse proxy for private and trusted home services.
-- **Target Services:**
-  - Vaultwarden (Bitwarden password manager)
-  - n8n (automation workflows)
-  - Samba / FileBrowser / OpenMediaVault / TrueNAS (storage)
-  - Immich (photo backup)
-  - Headscale (Tailscale control server)
-  - Pi-hole (DNS sinkhole)
-  - BookStack (documentation & notes)
-  - Home Assistant
-- **Ingress:** Authenticated via Cloudflare Tunnel (`cloudflared`) and local OpenWrt DNS rewrite.
+### 3.1 Zone 1: Safe Internal (`vmbr1` - `10.10.10.0/24`)
+- **Gateway:** `10.10.10.1` (OpenWrt `eth1`)
+- **Reverse Proxy:** `nginx-safe` (LXC 201, `10.10.10.10`)
+- **Access Model:** Internal-only. Tailscale mesh + Cloudflare gray DNS records (resolving to local/tailnet IPs). Zero public ingress.
+- **Hosted Services:**
+  - `Database`: Central PostgreSQL / Redis for local microservices
+  - `DBBackup`: Outbound pull worker for Supabase & Neon cold backup dumps (no inbound proxy)
+  - `n8n`: Private workflow automation engine
+  - `Gitea`: Self-hosted code repository
+  - `Immich`: Mobile photo backup & AI library
+  - `NAS`: HDD file storage (FileBrowser / Samba / OMV)
+  - `BookStack`: Private knowledge documentation
+  - `Kiwix`: Offline compressed Wikipedia / ZIM archive
+  - `Jellyfin`: Local media streaming
+- **Firewall Policy:** Outbound internet access allowed via NAT; inbound internet access completely blocked.
 
-### 3.2 `nginx-notsure` (LXC 202 on `vmbr3` - Untrusted Zone `10.30.30.0/24`)
-- **Role:** Ingress proxy for untrusted experiments and public-facing bots.
-- **Target Services:**
-  - Public webhooks
-  - Telegram / Discord bots
-  - Public Tor bridge/node monitoring
-- **Firewall Rule:** OpenWrt VM drops all traffic originating from `vmbr3` into `vmbr1` (Safe) or `vmbr0` (Home LAN).
+### 3.2 Zone 2: Safe Public Ingress (`vmbr2` - `10.20.20.0/24`)
+- **Gateway:** `10.20.20.1` (OpenWrt `eth2`)
+- **Reverse Proxy:** `nginx-public` (LXC 202, `10.20.20.10`)
+- **Access Model:** Inbound access via Cloudflare Tunnel (`cloudflared`) with Cloudflare Orange Proxy, GeoIP restrictions, and TLS termination.
+- **Hosted Services:**
+  - `Vaultwarden`: Password manager vault (locked down `/admin`, MFA required)
+  - `Headscale`: Self-hosted Tailscale coordination server
+- **Firewall Policy:** Traffic can only enter via Cloudflare Tunnel. Strictly isolated: cannot initiate connections into `vmbr1` (Safe Internal) or `vmbr0` (Home LAN).
 
-### 3.3 Malware Lab (`vmbr2` - Air-Gapped `10.20.20.0/24`)
-- **Role:** Isolated detonation chamber. No reverse proxy, no inbound ingress, zero access to home LAN.
+### 3.3 Zone 3: Home Assistant & IoT (`vmbr3` - `10.30.30.0/24`)
+- **Gateway:** `10.30.30.1` (OpenWrt `eth3`)
+- **Reverse Proxy:** **None** (Home Assistant has native Tailscale integration).
+- **Access Model:** Tailscale mesh for remote control + local IoT devices.
+- **Hosted Services:**
+  - `Home Assistant Core` and smart home integrations (Zigbee, Matter, ESPHome).
+- **Firewall Policy:** Isolated from internal data storage (`vmbr1`). Home Assistant can poll IoT endpoints, but IoT devices cannot reach any other zone.
+
+### 3.4 Zone 4: Unsafe / Online Workloads (`vmbr4` - `10.40.40.0/24`)
+- **Gateway:** `10.40.40.1` (OpenWrt `eth4`)
+- **Reverse Proxy:** **None** (Outbound only).
+- **Access Model:** Services in this zone initiate outbound connections to the internet or connect through external VPNs/proxies.
+- **Hosted Services:**
+  - `Tor Node`: Anti-censorship relay / bridge (`obfs4`)
+  - `*Arr Stack & qBittorrent`: Media indexers and P2P downloaders (bound to VPN)
+  - `MQTT`: Public-facing or external message broker
+  - `Telegram Bots`: Outbound HTTPS long-polling (`api.telegram.org`), no open ports needed.
+- **Firewall Policy:** Drop all packets destined for `vmbr0`, `vmbr1`, `vmbr2`, `vmbr3`, or `vmbr5`. Completely quarantined.
+
+### 3.5 Zone 5: Protocol Direct DMZ (`vmbr5` - `10.50.50.0/24`)
+- **Gateway:** `10.50.50.1` (OpenWrt `eth5`)
+- **Reverse Proxy:** **None** (Non-HTTP protocol services).
+- **Access Model:** Direct port forwarding through OpenWrt firewall with strict Fail2ban / CrowdSec IP banning.
+- **Hosted Services:**
+  - `Asterisk / FreePBX`: VoIP & VoWiFi PBX (SIP UDP/TCP 5060, RTP UDP range)
+  - `Self-Hosted Mail`: Mail transfer agent (SMTP 25/587/465, IMAP 993)
+- **Firewall Policy:** Strict port forwarding pinholes; rate-limiting; hard isolation preventing access to `vmbr1` internal services.
 
 ---
 
@@ -97,7 +129,9 @@ All self-hosted homelab applications live strictly behind the OpenWrt VM:
 ---
 
 ## 📋 5. Next Implementation Milestones
-- [ ] Deploy **`nginx-safe` (LXC 201)** on `vmbr1` (Safe Zone `10.10.10.10`).
-- [ ] Connect `cloudflared` tunnel and configure private routes to `nginx-safe`.
-- [ ] Deploy initial Safe Zone core services (Pi-hole, Vaultwarden, FileBrowser).
-- [ ] Deploy **`nginx-notsure` (LXC 202)** on `vmbr3` (Untrusted Zone `10.30.30.10`).
+
+- [ ] **Configure Proxmox Bridges:** Define `vmbr1`, `vmbr2`, `vmbr3`, `vmbr4`, `vmbr5` in `/etc/network/interfaces` on Proxmox host.
+- [ ] **OpenWrt VM Virtual NICs:** Attach virtual interfaces for each bridge (`eth1` through `eth5`) to VM 100.
+- [ ] **Deploy `nginx-safe` (LXC 201):** Debian 12 on `vmbr1` (`10.10.10.10`) for Safe Internal services.
+- [ ] **Deploy `nginx-public` (LXC 202):** Debian 12 on `vmbr2` (`10.20.20.10`) running `cloudflared` for Vaultwarden and Headscale.
+- [ ] **Configure OpenWrt Firewall Zones:** Establish zone drop rules enforcing unidirectional egress and strict quarantine for `vmbr4` and `vmbr5`.
