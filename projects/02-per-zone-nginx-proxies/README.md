@@ -10,7 +10,7 @@
 
 To maintain strict security and high availability, our network is partitioned into two distinct management realms:
 1. **Out-of-Band Physical Management (`vmbr0` / Home LAN):** Sits directly on the physical router's LAN. It does **not** rely on the OpenWrt VM. If the OpenWrt VM crashes, hangs, or is powered down, this out-of-band management interface remains 100% operational.
-2. **Per-Zone Virtual Proxies (`vmbr1`, `vmbr2`, `vmbr3`):** Governed strictly by the OpenWrt Firewall VM. Each security tier runs an isolated Nginx reverse proxy so a compromised service cannot bridge across network zones.
+2. **Per-Zone Virtual Proxies (`vmbr1`, `vmbr2`):** Governed strictly by the OpenWrt Firewall VM. Each security tier runs an isolated Nginx reverse proxy so a compromised service cannot bridge across network zones.
 
 ```
                   ┌─────────────────────────────────────────────────────────┐
@@ -24,14 +24,14 @@ To maintain strict security and high availability, our network is partitioned in
                  LXC 200 (192.168.1.130)                     WAN: 192.168.1.129
                  (Independent Fail-safe)                               │
                                             ┌─────────────────────────┼─────────────────────────┐
-                                            │ (vmbr1: Safe Zone)      │ (vmbr2: Malware Lab)    │ (vmbr3: Untrusted)
-                                            │ 10.10.10.0/24           │ 10.20.20.0/24           │ 10.30.30.0/24
+                                            │ (vmbr1: Safe Internal)  │ (vmbr2: Public Safe)    │ (vmbr4: Unsafe / Online)
+                                            │ 10.10.10.0/24           │ 10.20.20.0/24           │ 10.40.40.0/24
                                             ▼                         ▼                         ▼
-                                   [ nginx-safe (LXC 201) ]    [ Air-gapped / No Proxy ] [ nginx-notsure (LXC 202) ]
-                                   10.10.10.10                                           10.30.30.10
-                                            │                                                   │
-                                   ┌────────┴────────┐                                 ┌────────┴────────┐
-                               Vaultwarden, n8n, Storage                           Telegram Bots, Webhooks
+                                   [ nginx-safe (LXC 201) ]    [ nginx-public (LXC 202) ] [ Isolated / Direct Outbound ]
+                                   10.10.10.10                 10.20.20.10               (Tor, Arr Stack, Telegram)
+                                            │                         │
+                                   ┌────────┴────────┐       ┌────────┴────────┐
+                                    DB, n8n, NAS, Git         Vaultwarden, CF
 ```
 
 ---

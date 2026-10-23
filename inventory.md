@@ -59,12 +59,14 @@ The HP EliteDesk Mini PC currently runs several local services:
 
 ## 🗺️ Network Zones Topology
 
-| Zone / Subnet       | VLAN / Bridge      | Gateway IP    | Intended Purpose                                         |
-| :------------------ | :----------------- | :------------ | :------------------------------------------------------- |
-| **Home LAN**        | `vmbr0` / `br-lan` | `192.168.1.1` | Wi-Fi devices, PC, Proxmox host management               |
-| **Safe (DMZ)**      | `vmbr1` / `eth1`   | `10.10.10.1`  | n8n, Vaultwarden, Nginx,                                 |
-| **Unsafe (Lab)**    | `vmbr2` / `eth2`   | `10.20.20.1`  | Malware analysis, untrusted experiments (isolated), MQTT |
-| **Not-Sure (Test)** | `vmbr3` / `eth3`   | `10.30.30.1`  | Temporary staging and proof-of-concepts, Telegram Bots   |
+| Zone / Subnet               | VLAN / Bridge      | Gateway IP    | Intended Purpose                                              |
+| :-------------------------- | :----------------- | :------------ | :------------------------------------------------------------ |
+| **Home LAN / OOB**          | `vmbr0` / `br-lan` | `192.168.1.1` | Wi-Fi devices, PC, Proxmox host management, LXC 200, Pi-hole  |
+| **Safe (Internal)**         | `vmbr1` / `eth1`   | `10.10.10.1`  | Central DB, DBBackup, Gitea, Immich, NAS, n8n, BookStack      |
+| **Safe (Public Ingress)**   | `vmbr2` / `eth2`   | `10.20.20.1`  | Vaultwarden, Headscale (via Cloudflare Tunnel)                |
+| **Home Assistant (IoT)**    | `vmbr3` / `eth3`   | `10.30.30.1`  | Home Assistant core & smart home integrations (Tailscale)     |
+| **Unsafe (Online / Lab)**   | `vmbr4` / `eth4`   | `10.40.40.1`  | Tor obfs4, *Arr stack, qBittorrent, MQTT, Telegram bot        |
+| **DMZ (Direct Ingress)**    | `vmbr5` / `eth5`   | `10.50.50.1`  | Asterisk/FreePBX VoIP, Self-Hosted Mail (Fail2ban, raw ports) |
 
 ---
 
