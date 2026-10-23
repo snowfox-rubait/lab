@@ -85,6 +85,7 @@ flowchart TD
                 NginxSafe["Nginx + Tailscale<br/>Cloudflare DNS - Gray Proxy"]
 
                 Database["Central Database<br/>PostgreSQL / Redis"]
+                DBBackup["Database Backup<br/>Neon / Supabase"]
                 N8N["n8n Automation"]
                 Gitea["Gitea"]
                 Mermaid["Mermaid"]
@@ -95,6 +96,7 @@ flowchart TD
                 Jellyfin["Jellyfin / Plex"]
 
                 NginxSafe --> Database
+                NginxSafe --> DBBackup
                 NginxSafe --> N8N
                 NginxSafe --> Gitea
                 NginxSafe --> Mermaid
@@ -106,22 +108,16 @@ flowchart TD
             end
 
             %% Safe public services
-            subgraph ZonePublicSafe["Safe Online Services"]
+            subgraph ZonePublicSafe["Safe Online Services - vmbr2"]
                 direction TB
 
                 NginxPublic["Nginx + Cloudflare Tunnel<br/>Cloudflare DNS - Orange Proxy"]
 
                 Vaultwarden["Vaultwarden"]
                 Headscale["Headscale Control Plane"]
-                DBBackup["Database Backup<br/>Neon / Supabase"]
-                Mail["Self-Hosted Mail"]
-                Telegram["Telegram Bots & Webhooks"]
 
                 NginxPublic --> Vaultwarden
                 NginxPublic --> Headscale
-                NginxPublic --> DBBackup
-                NginxPublic --> Mail
-                NginxPublic --> Telegram
             end
 
             %% Home Assistant
@@ -137,21 +133,24 @@ flowchart TD
                 TorNode["Tor Node - obfs4"]
                 ArrStack["*Arr Stack & qBittorrent"]
                 MQTT["Public MQTT Broker"]
+                Telegram["Telegram Bots & Webhooks"]
 
                 UnsafeGateway --> TorNode
                 UnsafeGateway --> ArrStack
                 UnsafeGateway --> MQTT
+                UnsafeGateway --> Telegram
             end
 
-            %% VoIP DMZ
-            subgraph ZoneDMZ["VoIP DMZ"]
+            %% VoIP / Direct Ingress DMZ
+            subgraph ZoneDMZ["VoIP & Direct Ingress DMZ"]
                 Asterisk["Asterisk / FreePBX<br/>VoIP / VoWiFi<br/>Fail2ban"]
+                Mail["Self-Hosted Mail<br/>SMTP / IMAP / POP3<br/>Fail2ban"]
             end
         end
 
         %% OpenWrt interfaces to isolated service bridges
         OpenWrt <-->|Virtual NIC / vmbr1| ZoneSafe
-        OpenWrt <-->|Virtual NIC / dedicated bridge| ZonePublicSafe
+        OpenWrt <-->|Virtual NIC / vmbr2| ZonePublicSafe
         OpenWrt <-->|Virtual NIC / dedicated bridge| ZoneHA
         OpenWrt <-->|Virtual NIC / dedicated bridge| ZoneUnsafe
         OpenWrt <-->|Virtual NIC / dedicated bridge| ZoneDMZ
