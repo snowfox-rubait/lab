@@ -32,8 +32,8 @@ To maintain high availability and defense-in-depth, the network is partitioned i
  10.10.10.10               10.20.20.10                   10.30.30.10          (No Ingress Proxy)     (No HTTP Proxy)
         │                         │                         │                     │                     │
 ┌───────┴────────┐       ┌────────┴────────┐       ┌────────┴────────┐   ┌────────┴────────┐   ┌────────┴────────┐
-Central DB, n8n,          Vaultwarden,              HA Core &             Tor obfs4, *Arr,      Asterisk FreePBX,
-Gitea, Immich, NAS,       Headscale Control         Zigbee/Matter         qBittorrent, MQTT,    Self-Hosted Mail
+Central DB, n8n,          Vaultwarden,              HA Core, Mosquitto    Tor obfs4, *Arr,      Asterisk FreePBX,
+Gitea, Immich, NAS,       Headscale Control         MQTT, ESP Sensors     qBittorrent,          Self-Hosted Mail
 BookStack, Kiwix          (Cloudflare Tunnel)       (Tailscale Native)    Telegram Polling      (Fail2ban)
 ```
 
@@ -71,7 +71,7 @@ All homelab services live behind the OpenWrt VM, partitioned by protocol, access
 - **Access Model:** Internal-only. Tailscale mesh + Cloudflare gray DNS records (resolving to local/tailnet IPs). Zero public ingress.
 - **Hosted Services:**
   - `Database`: Central PostgreSQL / Redis for local microservices
-  - `DBBackup`: Outbound pull worker for Supabase & Neon cold backup dumps (no inbound proxy)
+  - `DBBackup`: Outbound pull worker for Supabase & Neon cold backup dumps (direct outbound NAT route; **no Nginx virtual host**)
   - `n8n`: Private workflow automation engine
   - `Gitea`: Self-hosted code repository
   - `Immich`: Mobile photo backup & AI library
@@ -96,6 +96,7 @@ All homelab services live behind the OpenWrt VM, partitioned by protocol, access
 - **Access Model:** Tailscale mesh for remote control + local IoT devices.
 - **Hosted Services:**
   - `Home Assistant Core` and smart home integrations (Zigbee, Matter, ESPHome).
+  - `Local MQTT Broker (Mosquitto)`: Dedicated message broker for local ESP32/ESP8266 telemetry.
 - **Firewall Policy:** Isolated from internal data storage (`vmbr1`). Home Assistant can poll IoT endpoints, but IoT devices cannot reach any other zone.
 
 ### 3.4 Zone 4: Unsafe / Online Workloads (`vmbr4` - `10.40.40.0/24`)
@@ -105,7 +106,6 @@ All homelab services live behind the OpenWrt VM, partitioned by protocol, access
 - **Hosted Services:**
   - `Tor Node`: Anti-censorship relay / bridge (`obfs4`)
   - `*Arr Stack & qBittorrent`: Media indexers and P2P downloaders (bound to VPN)
-  - `MQTT`: Public-facing or external message broker
   - `Telegram Bots`: Outbound HTTPS long-polling (`api.telegram.org`), no open ports needed.
 - **Firewall Policy:** Drop all packets destined for `vmbr0`, `vmbr1`, `vmbr2`, `vmbr3`, or `vmbr5`. Completely quarantined.
 
@@ -124,7 +124,10 @@ All homelab services live behind the OpenWrt VM, partitioned by protocol, access
 
 1. **Proxmox LXC Systemd Nesting:** Configured `pct set 200 --features nesting=1` to allow systemd inside Debian 12 unprivileged containers.
 2. **Daemon Deployment:** Python web service cleanly transferred and managed via `systemctl enable --now wan-webui.service`.
-3. **SSH Key Trust:** Authorized `root@wan-controller`'s public ed25519 key inside physical router's `/etc/dropbear/authorized_keys` with `StrictHostKeyChecking=no`.
+3. **SSH Host Key Pinning (StrictHostKeyChecking Hardened):**
+   - Public key auth established between `root@wan-controller` and physical router (`192.168.1.1`).
+   - Hardened `app.py`: Removed all insecure `-o StrictHostKeyChecking=no` flags.
+   - Pinned physical router's host ed25519 key into `/root/.ssh/known_hosts` inside LXC 200 using `ssh-keyscan -H 192.168.1.1` to eliminate MITM attack vectors.
 
 ---
 

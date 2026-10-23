@@ -120,9 +120,11 @@ flowchart TD
                 NginxPublic --> Headscale
             end
 
-            %% Home Assistant
-            subgraph ZoneHA["Home Assistant Zone - vmbr3"]
+            %% Home Assistant & IoT
+            subgraph ZoneHA["Home Assistant & IoT Zone - vmbr3"]
                 HA["Home Assistant Core & Integrations<br/>Native Tailscale Integration"]
+                MQTT_Local["Local MQTT Broker (Mosquitto)<br/>ESP32 / ESP8266 IoT Sensors"]
+                HA --- MQTT_Local
             end
 
             %% Unsafe services
@@ -131,7 +133,6 @@ flowchart TD
 
                 TorNode["Tor Node - obfs4"]
                 ArrStack["*Arr Stack & qBittorrent"]
-                MQTT["Public MQTT Broker"]
                 Telegram["Telegram Bots<br/>Outbound polling: api.telegram.org"]
             end
 
