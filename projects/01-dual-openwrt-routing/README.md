@@ -20,5 +20,6 @@
 - 🧪 **Experiments Log:**
   - [[001-failover-wan|EXP-001: Dual OpenWrt WAN Failover with Metric Switching]]
   - [[002-vlan-trunking|EXP-002: Single-Cable VLAN Trunking & Multi-Mode Dual PPPoE]]
+  - [[003-iot-vlan30-trunking|EXP-003: Single-Cable Multi-VLAN Trunking for Isolated IoT Wi-Fi (VLAN 30)]]
 - 🔒 **Environment Configurations:**
   - Configuration template: `.env.example` (PPPoE credentials, static gateway mappings)

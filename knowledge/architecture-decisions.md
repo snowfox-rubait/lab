@@ -53,9 +53,12 @@ Key architectural risks and challenges identified:
   - Internet / WAN: Blocked by default, with optional UDP 123 NTP pinhole if local real-time clocks require time synchronization.
 
 #### 2.4 Telemetry Routing to Mosquitto MQTT (`vmbr3`)
-- **Action:** Connect physical IoT traffic to the Mosquitto broker in `vmbr3` (`10.30.30.0/24`):
-  - **Primary Model (802.1Q VLAN 30 Trunking - Recommended):** Extend the single-cable trunk architecture proven in EXP-002 (`lan3.100`) by creating `lan3.30` on Archer C6 and `enp12s0.30` on Proxmox bridged into `vmbr3`. The IoT wireless interface bridges directly into `vmbr3`, placing microcontrollers on the `10.30.30.0/24` subnet where they talk directly to Mosquitto (`10.30.30.10:1883`) without NAT or routing latency.
-  - **Fallback Model (L3 Routed Subnet):** Archer C6 hosts `192.168.30.0/24` locally and uses an explicit firewall pinhole forwarding TCP 1883 to OpenWrt VM (`192.168.1.129`), which routes into `vmbr3`.
+- **Decision:** Selected and implemented **Option A (802.1Q VLAN 30 Trunking)** over Option B (L3 routing):
+  - Extends the single-cable trunk architecture proven in [[002-vlan-trunking|EXP-002]] and fully specified in [[003-iot-vlan30-trunking|EXP-003]].
+  - Sub-interface `lan3.30` on Archer C6 is combined with the `snowfox-iot` VAP in a zero-IP Layer-2 bridge (`br-iot`).
+  - Proxmox bridges `enp12s0.30` into `vmbr3`.
+  - OpenWrt VM serves DHCP leases in `10.30.30.0/24` with static leases for `MAC_ESP32` (`10.30.30.10`) and `MAC_ESP8266` (`10.30.30.11`).
+  - OpenWrt VM firewall strictly confines IoT devices to Mosquitto MQTT (`10.30.30.10:1883`), dropping all traffic toward other internal zones and the public WAN.
 
 ---
 

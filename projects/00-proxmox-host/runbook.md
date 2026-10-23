@@ -92,11 +92,11 @@ Managed by `/usr/local/bin/power-manager.sh` and `/etc/cron.d/power-manager`.
 | `vmbr0` | `enp12s0` (Built-in NIC) | Home LAN / Out-of-Band Management (`192.168.1.0/24`)           |
 | `vmbr1` | *None (isolated)*        | Safe Internal Zone (`10.10.10.0/24`)                           |
 | `vmbr2` | *None (isolated)*        | Safe Public Ingress Zone (`10.20.20.0/24`)                     |
-| `vmbr3` | *None (isolated)*        | Home Assistant & IoT Zone (`10.30.30.0/24`)                     |
+| `vmbr3` | `enp12s0.30`             | Home Assistant & IoT Zone (`10.30.30.0/24`, VLAN 30 Trunk)    |
 | `vmbr4` | *None (isolated)*        | Unsafe / Online Workloads Zone (`10.40.40.0/24`)               |
 | `vmbr5` | *None (isolated)*        | Direct Protocol Ingress DMZ (`10.50.50.0/24`)                  |
 | `vmbr6` | *None (isolated)*        | Management & Telegram Bots Zone (`10.60.60.0/24`)              |
-| `vmbr100` | *None (isolated)*      | Dedicated WAN VLAN Trunk Bridge (VLAN 100 for VM PPPoE dialer) |
+| `vmbr100` | `enp12s0.100`          | Dedicated WAN VLAN Trunk Bridge (VLAN 100 for VM PPPoE dialer) |
 
 ---
 
