@@ -85,7 +85,7 @@ flowchart TD
                 NginxSafe["Nginx + Tailscale<br/>Cloudflare DNS - Gray Proxy"]
 
                 Database["Central Database<br/>PostgreSQL / Redis"]
-                DBBackup["Database Backup<br/>Neon / Supabase"]
+                DBBackup["Database Backup<br/>Outbound sync: Neon / Supabase"]
                 N8N["n8n Automation"]
                 Gitea["Gitea"]
                 Mermaid["Mermaid"]
@@ -96,7 +96,6 @@ flowchart TD
                 Jellyfin["Jellyfin / Plex"]
 
                 NginxSafe --> Database
-                NginxSafe --> DBBackup
                 NginxSafe --> N8N
                 NginxSafe --> Gitea
                 NginxSafe --> Mermaid
@@ -121,28 +120,22 @@ flowchart TD
             end
 
             %% Home Assistant
-            subgraph ZoneHA["Home Assistant Zone - Dedicated Bridge / VLAN"]
+            subgraph ZoneHA["Home Assistant Zone - vmbr3"]
                 HA["Home Assistant Core & Integrations<br/>Native Tailscale Integration"]
             end
 
             %% Unsafe services
-            subgraph ZoneUnsafe["Unsafe Online Services"]
+            subgraph ZoneUnsafe["Unsafe Online Services - vmbr4"]
                 direction TB
 
-                UnsafeGateway["Isolated Gateway"]
                 TorNode["Tor Node - obfs4"]
                 ArrStack["*Arr Stack & qBittorrent"]
                 MQTT["Public MQTT Broker"]
-                Telegram["Telegram Bots & Webhooks"]
-
-                UnsafeGateway --> TorNode
-                UnsafeGateway --> ArrStack
-                UnsafeGateway --> MQTT
-                UnsafeGateway --> Telegram
+                Telegram["Telegram Bots<br/>Outbound polling: api.telegram.org"]
             end
 
             %% VoIP / Direct Ingress DMZ
-            subgraph ZoneDMZ["VoIP & Direct Ingress DMZ"]
+            subgraph ZoneDMZ["VoIP & Direct Ingress DMZ - vmbr5"]
                 Asterisk["Asterisk / FreePBX<br/>VoIP / VoWiFi<br/>Fail2ban"]
                 Mail["Self-Hosted Mail<br/>SMTP / IMAP / POP3<br/>Fail2ban"]
             end
@@ -151,9 +144,9 @@ flowchart TD
         %% OpenWrt interfaces to isolated service bridges
         OpenWrt <-->|Virtual NIC / vmbr1| ZoneSafe
         OpenWrt <-->|Virtual NIC / vmbr2| ZonePublicSafe
-        OpenWrt <-->|Virtual NIC / dedicated bridge| ZoneHA
-        OpenWrt <-->|Virtual NIC / dedicated bridge| ZoneUnsafe
-        OpenWrt <-->|Virtual NIC / dedicated bridge| ZoneDMZ
+        OpenWrt <-->|Virtual NIC / vmbr3| ZoneHA
+        OpenWrt <-->|Virtual NIC / vmbr4| ZoneUnsafe
+        OpenWrt <-->|Virtual NIC / vmbr5| ZoneDMZ
     end
 
     %% Physical router to Proxmox
