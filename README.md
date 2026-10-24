@@ -252,3 +252,10 @@ flowchart TD
 - **Documentation:** [[lab/projects/10-workstation-av-edr-stack/README|Workstation Antivirus / EDR Stack & Incident Auto-Response Architecture]]
 - **Status:** Planned / Architecture & Integration Blueprint
 - **Covers:** Host-level endpoint defense on Main PC (`rubait`), ClamAV signatures, YARA rules, osquery, eBPF telemetry, local Ollama AI alert triage, and automated info-stealer scans cascading from Vaultwarden breach reports.
+
+### 11. Multi-WAN Load Balancing (`mwan3`)
+- **Directory:** `projects/11-multiwan-load-balancing/`
+- **Documentation:** [[lab/projects/11-multiwan-load-balancing/README|Multi-WAN Load Balancing Architecture]]
+- **Runbook:** [[lab/projects/11-multiwan-load-balancing/runbook|Multi-WAN Load Balancing Operations & Verification Runbook]]
+- **Status:** Staged & Documented (Awaiting Off-Peak Testing Window)
+- **Covers:** Simultaneous dual-PPPoE traffic splitting (Mode 3), sticky HTTPS persistence (port 443), P2P/torrent VM offload, sub-5-second ICMP health tracking, and zero-downtime safety rollback.

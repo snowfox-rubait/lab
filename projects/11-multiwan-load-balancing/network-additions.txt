@@ -1,0 +1,16 @@
+# /etc/config/network addition on Physical Archer C6 for MWAN3 routing table:
+# Creates a logical interface pointing to the OpenWrt VM as WAN 2
+
+config interface 'wan_vm'
+	option proto 'static'
+	option device 'br-lan'
+	option ipaddr '192.168.1.1'
+	option netmask '255.255.255.0'
+	option gateway '192.168.1.129'
+	option metric '20'
+	option defaultroute '0'
+
+# In /etc/config/firewall, add 'wan_vm' to the 'wan' zone list:
+# list network 'wan'
+# list network 'wan6'
+# list network 'wan_vm'

@@ -1,0 +1,138 @@
+# /etc/config/mwan3 configuration for Physical Archer C6 (Mode 3 Dual WAN)
+# WAN 1: Native PPPoE on br-wan (wan)
+# WAN 2: OpenWrt VM via Home LAN gateway 192.168.1.129 (wan_vm)
+
+config globals 'globals'
+	option mmx_mask '0x3F00'
+	option log_level 'notice'
+
+# --- WAN Interfaces ---
+
+config interface 'wan'
+	option enabled '1'
+	list track_ip '1.1.1.1'
+	list track_ip '8.8.8.8'
+	list track_ip '9.9.9.9'
+	option reliability '2'
+	option count '1'
+	option timeout '2'
+	option interval '5'
+	option down '3'
+	option up '3'
+	option initial_state 'online'
+	option family 'ipv4'
+
+config interface 'wan_vm'
+	option enabled '1'
+	list track_ip '1.0.0.1'
+	list track_ip '8.8.4.4'
+	list track_ip '149.112.112.112'
+	option reliability '2'
+	option count '1'
+	option timeout '2'
+	option interval '5'
+	option down '3'
+	option up '3'
+	option initial_state 'online'
+	option family 'ipv4'
+
+# --- Member Profiles ---
+
+config member 'wan_m1_w3'
+	option interface 'wan'
+	option metric '1'
+	option weight '3'
+
+config member 'wan_vm_m1_w3'
+	option interface 'wan_vm'
+	option metric '1'
+	option weight '3'
+
+config member 'wan_m1_w5'
+	option interface 'wan'
+	option metric '1'
+	option weight '5'
+
+config member 'wan_vm_m1_w5'
+	option interface 'wan_vm'
+	option metric '1'
+	option weight '5'
+
+config member 'wan_m1_only'
+	option interface 'wan'
+	option metric '1'
+	option weight '1'
+
+config member 'wan_m2_backup'
+	option interface 'wan'
+	option metric '2'
+	option weight '1'
+
+config member 'wan_vm_m1_only'
+	option interface 'wan_vm'
+	option metric '1'
+	option weight '1'
+
+config member 'wan_vm_m2_backup'
+	option interface 'wan_vm'
+	option metric '2'
+	option weight '1'
+
+# --- Routing Policies ---
+
+# Balanced 50/50 (Round-Robin with sticky session)
+config policy 'balanced_loadsharing'
+	list use_member 'wan_m1_w3'
+	list use_member 'wan_vm_m1_w3'
+	option last_resort 'unreachable'
+
+# Prefer native physical router, failover to VM
+config policy 'prefer_physical'
+	list use_member 'wan_m1_only'
+	list use_member 'wan_vm_m2_backup'
+	option last_resort 'default'
+
+# Prefer OpenWrt VM, failover to physical router
+config policy 'prefer_vm'
+	list use_member 'wan_vm_m1_only'
+	list use_member 'wan_m2_backup'
+	option last_resort 'default'
+
+# --- Policy Routing Rules ---
+
+# Rule 1: Exclude local LAN and management traffic from mwan3
+config rule 'local_subnets'
+	option dest_ip '192.168.1.0/24,10.0.0.0/8,172.16.0.0/12'
+	option proto 'all'
+	option sticky '0'
+	option use_policy 'default'
+
+# Rule 2: Keep DNS queries deterministic (avoid breaking DNS state)
+config rule 'dns_traffic'
+	option dest_port '53'
+	option proto 'udp'
+	option sticky '0'
+	option use_policy 'prefer_physical'
+
+# Rule 3: Sticky sessions for HTTPS / Banking (prevent session drops)
+config rule 'https_sticky'
+	option dest_port '443'
+	option proto 'tcp'
+	option sticky '1'
+	option timeout '3600'
+	option use_policy 'balanced_loadsharing'
+
+# Rule 4: P2P / Torrent traffic directed to VM WAN (offload CPU from physical router)
+config rule 'p2p_bittorrent'
+	option dest_port '6881-6889,51413'
+	option proto 'all'
+	option sticky '0'
+	option use_policy 'prefer_vm'
+
+# Rule 5: Default rule for all other traffic (50/50 balanced)
+config rule 'default_rule'
+	option dest_ip '0.0.0.0/0'
+	option proto 'all'
+	option sticky '1'
+	option timeout '600'
+	option use_policy 'balanced_loadsharing'
