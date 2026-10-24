@@ -11,9 +11,11 @@ Due to known MediaTek MT7603E PCIe driver lockups after prolonged uptime, an aut
 
 - **Timezone Synchronized:** `Asia/Dhaka` (`UTC+6`).
 - **Cron Service:** Enabled and started (`/etc/init.d/cron`).
-- **Schedule:** `0 4,16 * * * /sbin/reboot`
+- **Protection Wrapper:** `/usr/bin/safe-reboot`
+- **Schedule:** `0 4,16 * * * /usr/bin/safe-reboot`
   - Reboots at **4:00 AM** and **4:00 PM** local time daily.
   - Mitigates wireless driver hang and clears hardware buffers proactively during off-peak hours.
+  - **Reboot Loop Prevention Mechanism:** Embedded consumer routers lack battery-backed hardware RTCs. When booting, OpenWrt restores time from the newest file in `/etc` via `sysfixtime` (e.g. `15:42`). If NTP synchronization is delayed, or if the router reboots fast enough to wake back up within the same scheduled minute, raw `/sbin/reboot` can enter a reboot loop. `/usr/bin/safe-reboot` verifies that system uptime is $\ge$ 600 seconds (10 minutes) and sleeps 60 seconds across the minute boundary before issuing `/sbin/reboot`. If uptime is under 10 minutes, the reboot is aborted and logged to syslog.
 
 ---
 

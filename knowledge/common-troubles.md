@@ -25,3 +25,38 @@ Trigger a hardware reboot from SSH:
 sync && echo b > /proc/sysrq-trigger
 ```
 Upon reboot, the PCIe reset initializes the MT7603E/MT7615E firmware cleanly, restoring both `Rubait` (2.4 GHz), `Rubait_5G`, and LuCI.
+
+---
+
+## 🔁 OpenWrt Scheduled Cron Reboot Loop (RTC / sysfixtime Skew)
+
+### Symptoms:
+- Router reboots continuously at the scheduled cron time (e.g., at 16:00:00).
+- Ethernet link flaps down and up repeatedly every ~40–60 seconds for multiple cycles (up to 30–40 minutes).
+- Proxmox kernel log reports: `enp12s0: Link is Down` followed by `Link is Up` in rapid succession.
+- Syslog shows: `cron.err crond: time disparity of X minutes detected`.
+
+### Root Cause:
+1. **No Battery-Backed RTC:** Embedded consumer routers like TP-Link Archer C6 v3 do not have a real-time clock (RTC) chip.
+2. **`sysfixtime` Initial Clock Guess:** During boot (`/etc/init.d/sysfixtime`), OpenWrt sets the system clock to the timestamp of the newest file found under `/etc` (e.g., `15:42`).
+3. **Reboot Loop Window:** When the cron trigger `0 4,16 * * * /sbin/reboot` fired at `16:00:00`, the router rebooted (~25-35s boot time). Upon boot, before WAN/PPPoE was up and NTP could contact upstream time servers, the clock temporarily restored to `15:42` (or remained inside the `16:00` minute). Once NTP or `sysfixtime` stepped the clock, or while the clock traversed the target minute, crond matched `minute 0, hour 16` again and immediately issued another `/sbin/reboot`.
+4. This cycle repeated on every boot until NTP stepped past `16:00:59` before `crond` could evaluate the rule, or until the network stabilized enough to step to `16:43`.
+
+### Prevention & Resolution:
+Never invoke bare `/sbin/reboot` in an OpenWrt cron job. Always protect scheduled reboots with an uptime threshold guard script (`/usr/bin/safe-reboot`):
+```bash
+#!/bin/sh
+UPTIME=$(cut -d. -f1 /proc/uptime)
+# Abort if router has been up for less than 10 minutes (600s)
+if [ "${UPTIME:-0}" -lt 600 ]; then
+    logger -t safe-reboot "Aborting scheduled reboot: system uptime is only ${UPTIME}s (< 600s)."
+    exit 1
+fi
+logger -t safe-reboot "Scheduled reboot proceeding (uptime: ${UPTIME}s)..."
+sleep 60
+/sbin/reboot
+```
+In crontab (`/etc/crontabs/root`), use:
+```crontab
+0 4,16 * * * /usr/bin/safe-reboot
+```

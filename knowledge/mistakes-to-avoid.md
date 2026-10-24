@@ -65,3 +65,11 @@
 #### ❌ Overlapping IP assignments between server daemons and client static leases
 - **Problem:** Assigning the same IP (e.g. `10.30.30.10`) to both a central server (Mosquitto MQTT broker) and a DHCP client device (ESP32) creates an immediate ARP collision and breaks network routing.
 - **Fix:** Always maintain a single authoritative IP allocation table per subnet: reserve low IPs (`.2`–`.9`) for infrastructure daemons, middle IPs (`.10`–`.49`) for static client leases, and upper blocks (`.100`–`.200`) for dynamic DHCP pools.
+
+---
+
+### 6. Router Automation, Cron & Maintenance
+
+#### ❌ Scheduling bare `/sbin/reboot` in OpenWrt cron without uptime guards
+- **Problem:** Embedded consumer routers lack real-time clock (RTC) batteries. During boot, OpenWrt restores time from the newest file in `/etc` via `sysfixtime`. If a cron reboot triggers at `16:00:00`, the router reboots in ~30 seconds; if the clock has not stepped past `16:00:59` (or is temporarily restored to an earlier timestamp before NTP syncs), `crond` evaluates the matching rule again and reboots immediately. This triggers an infinite reboot loop that lasts tens of minutes.
+- **Fix:** Never invoke bare `/sbin/reboot` in cron. Always gate automated reboots through a wrapper script (e.g., `/usr/bin/safe-reboot`) that verifies `cut -d. -f1 /proc/uptime` is $\ge$ 600s (10 minutes) and sleeps 60 seconds across the scheduled minute boundary before issuing reboot.
