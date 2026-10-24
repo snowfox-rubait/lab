@@ -188,7 +188,7 @@ Beyond basic password storage, Vaultwarden unlocks the full suite of enterprise-
 ---
 
 ## 💾 Backup Strategy
-- **Live Database:** Centralized PostgreSQL instance on Dedicated Database Tier (`vmbr7`, `10.70.70.2`).
+- **Live Database:** Centralized PostgreSQL instance on Dedicated Database Tier (`vmbr7`, `10.70.70.10:5432`).
 - **Cold Backup Sync:** Encrypted nightly dumps mirrored to offsite cloud (Cloudflare R2 / S3 / Supabase storage bucket) to guarantee zero data loss.
 
 ---

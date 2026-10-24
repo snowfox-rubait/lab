@@ -85,23 +85,25 @@ The baseline infrastructure is live under [[../projects/07-pihole-dns-sinkhole/R
 | :--- | :--- | :--- | :--- |
 | **Pi-hole DNS Sinkhole** | Debian 12 LXC (LXC 205) | Home LAN / OOB (`vmbr0`) | 🟢 **Graduated to Live (`07-pihole`)** |
 | **Multi-WAN Load Balancing (`mwan3`)** | Archer C6 & OpenWrt VM | Home LAN (`vmbr0` / VLAN 100) | 🟡 **Staged (`11-multiwan`)** |
-| **n8n Automation Engine** | Docker / Debian LXC | Safe Internal (`vmbr1`) | Low (`08-n8n`) |
-| **Centralized Telegram Hub** | Docker / Debian LXC | Safe Internal / OOB (`vmbr0`) | Low (`09-telegram`) |
+| **Central Database (PostgreSQL 17 / Redis 7)**| Debian 13 LXC (LXC 210) | Dedicated Database (`vmbr7`) | 🟢 **Live (`12-central-database`)** |
+| **Vaultwarden Production** | Docker in Debian 13 LXC (LXC 220) | Public Ingress (`vmbr2`) | 🟢 **Live (`03-vaultwarden`)** |
+| **Public Reverse Proxy (`nginx-public`)** | Debian 13 LXC (LXC 202) | Public Ingress (`vmbr2`) | 🟢 **Live (`02-per-zone-nginx`)** |
+| **Fail2ban Intrusion Defense** | Native Proxmox Host | Proxmox Management (`:8006`, `:22`) | 🟢 **Live (`knowledge/security-fail2ban`)** |
+| **n8n Automation Engine** | Debian 13 LXC | Safe Internal (`vmbr1`) | High (`08-n8n`) |
+| **Gitea Source Control** | Debian 13 LXC | Safe Internal (`vmbr1`) | High |
+| **Centralized Telegram Hub** | Debian 13 LXC | Safe Internal / OOB (`vmbr0`) | Low (`09-telegram`) |
 | **Workstation AV / EDR Stack** | Native Linux (EliteDesk PC) | Workstation Host (`rubait`) | Medium (`10-workstation-av`) |
-| **Mermaid Diagram Server**| Docker / Debian LXC | Safe Internal (`vmbr1`) | Low |
-| **Central DB (PostgreSQL)**| Debian LXC | Dedicated Database (`vmbr7`) | Medium |
-| **DB Backup Sync (Neon/Supa)**| Python / Bash Cron LXC | Dedicated Database (`vmbr7`) | Low |
-| **Gitea** | Debian LXC (Docker / Binary) | Safe Internal (`vmbr1`) | Low |
-| **Immich** | Docker LXC + GPU passthrough | Safe Internal (`vmbr1`) | Medium |
-| **File Browser / NAS** | Debian LXC + Disk Passthrough| Safe Internal (`vmbr1`) | Low |
-| **Kiwix (Offline ZIM)** | Docker LXC | Safe Internal (`vmbr1`) | Low |
-| **BookStack** | Docker LXC (PHP/MariaDB) | Safe Internal (`vmbr1`) | Low |
-| **Vaultwarden** | Docker in Debian 13 LXC | Public Ingress (`vmbr2`) | 🟢 **Live (`03-vaultwarden`)** |
+| **Mermaid Diagram Server**| Docker / Debian 13 LXC | Safe Internal (`vmbr1`) | Low |
+| **DB Backup Sync (Neon/Supa)**| Debian 13 LXC | Dedicated Database (`vmbr7`) | Low |
+| **Immich Photo Vault** | Docker in Debian 13 LXC | Safe Internal (`vmbr1`) | Medium |
+| **File Browser / NAS** | Debian 13 LXC + Disk Passthrough| Safe Internal (`vmbr1`) | Low |
+| **Kiwix (Offline ZIM)** | Debian 13 LXC | Safe Internal (`vmbr1`) | Low |
+| **BookStack** | Debian 13 LXC | Safe Internal (`vmbr1`) | Low |
 | **Headscale** | *Undecided / Separated* | *Deferred (Out of current scope)* | Medium |
 | **Home Assistant Core** | Dedicated Proxmox VM / LXC | Home Assistant & IoT (`vmbr3`) | Medium |
-| **MQTT Broker (Mosquitto)**| Debian / Alpine LXC | Home Assistant & IoT (`vmbr3`) | Low |
+| **MQTT Broker (Mosquitto)**| Debian 13 LXC | Home Assistant & IoT (`vmbr3`) | Low |
 | **qBittorrent + *Arr Stack** | Docker LXC + VPN + Host Mount | Unsafe Online (`vmbr4`)| Medium |
-| **Tor obfs4 Bridge** | Debian LXC | Unsafe Online (`vmbr4`)| Medium |
+| **Suricata / Snort DPI Container** | Debian 13 LXC / Inline VM | Gateway Inspection Tier | Low (Future Architecture) |
 | **Asterisk / FreePBX** | Dedicated VM / Debian LXC | Protocol DMZ (`vmbr5`) | High |
-| **Self-Hosted Mail** | Debian LXC (Postfix/Dovecot) | Protocol DMZ (`vmbr5`) | High |
-| **Router & Onboarding Bots** | Python LXC | Management Bots (`vmbr6`) | Low |
+| **Self-Hosted Mail** | Debian 13 LXC (Postfix/Dovecot) | Protocol DMZ (`vmbr5`) | High |
+| **Router & Onboarding Bots** | Python in Debian 13 LXC | Management Bots (`vmbr6`) | Low |

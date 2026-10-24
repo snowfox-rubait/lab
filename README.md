@@ -120,7 +120,7 @@ flowchart TD
             subgraph ZoneDB["Dedicated Database Tier - vmbr7<br/>Central Multi-Tenant & Cloud Sync"]
                 direction TB
 
-                Database["Central Multi-Tenant Database<br/>PostgreSQL 16 & Redis<br/>Strict Port 5432 / 6379 Pinholes"]
+                Database["Central Multi-Tenant Database<br/>LXC 210 (10.70.70.10)<br/>PostgreSQL 17 & Redis 7<br/>Strict Port 5432 (mTLS / SCRAM)"]
                 DBBackup["Central Database Backup Engine<br/>Outbound Cold-Pull: Neon & Supabase<br/>Automated pg_dump to Local Storage"]
 
                 DBBackup -.->|Local Dump Socket| Database
@@ -130,13 +130,11 @@ flowchart TD
             subgraph ZonePublicSafe["Safe Online Services - vmbr2"]
                 direction TB
 
-                NginxPublic["Nginx + Cloudflare Tunnel<br/>Cloudflare DNS - Orange Proxy"]
+                NginxPublic["Nginx Public Ingress + cloudflared<br/>LXC 202 (10.20.20.10)<br/>Bangladesh Edge Geo-Fence"]
 
-                Vaultwarden["Vaultwarden"]
-                Headscale["Headscale Control Plane"]
+                Vaultwarden["Vaultwarden Production<br/>LXC 220 (10.20.20.11:8443)<br/>E2EE Internal PKI"]
 
                 NginxPublic --> Vaultwarden
-                NginxPublic --> Headscale
             end
 
             %% Home Assistant & IoT
@@ -150,7 +148,6 @@ flowchart TD
             subgraph ZoneUnsafe["Unsafe Online Services - vmbr4"]
                 direction TB
 
-                TorNode["Tor Node - obfs4"]
                 ArrStack["*Arr Stack & qBittorrent<br/>Direct host storage mount"]
             end
 

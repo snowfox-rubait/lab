@@ -41,7 +41,7 @@ n8n serves as the homelab's central automation engine. Instead of scattering har
 ```
 
 - **Network Zone:** Placed inside **Safe Offline Bridge (`vmbr1`)** with granular egress routing to `vmbr2` (Vaultwarden) and internet access via physical router gateway (`192.168.1.1`) for external APIs (Telegram, HIBP).
-- **Database Dependency:** Centralized PostgreSQL backend on Dedicated Database Tier (`vmbr7`, `10.70.70.2`).
+- **Database Dependency:** Centralized PostgreSQL backend on Dedicated Database Tier (`vmbr7`, `10.70.70.10:5432`).
 - **Security Ingress:** Accessible internally at `n8n.snowfox.live` via `nginx-safe` reverse proxy; public webhook triggers authenticated via HMAC signatures.
 
 ---
@@ -107,6 +107,6 @@ An autonomous security watchdog that:
 ## 📋 4. Roadmap & Planned Future Implementations
 
 - [ ] **Phase 1: n8n Container Deployment:** Provision Proxmox Debian LXC with rootless containerized n8n on `vmbr1` (`10.10.10.25`).
-- [ ] **Phase 2: Database Centralization:** Connect n8n state storage to PostgreSQL on `vmbr7` (`10.70.70.2`).
+- [ ] **Phase 2: Database Centralization:** Connect n8n state storage to PostgreSQL on `vmbr7` (`10.70.70.10:5432`).
 - [ ] **Phase 3: Vaultwarden Watchdog Node:** Build the Bitwarden CLI sidecar and test `bw report password-health` in sandbox.
 - [ ] **Phase 4: Multi-Service Alert Dispatcher:** Integrate Proxmox backup notifications, OpenWrt WAN status changes, and Pi-hole DNS sinkhole statistics into unified n8n workflows.

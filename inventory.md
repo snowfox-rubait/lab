@@ -66,12 +66,12 @@ The HP EliteDesk Mini PC currently runs several local services:
 | :-------------------------- | :----------------- | :------------ | :------------------------------------------------------------ |
 | **Home LAN / OOB**          | `vmbr0` / `br-lan` | `192.168.1.1` | Wi-Fi devices, PC, Proxmox host management, LXC 200, Pi-hole  |
 | **Safe (Internal Apps)**    | `vmbr1` / `eth1`   | `10.10.10.1`  | Private internal apps: Gitea, Immich, NAS, n8n, BookStack, Kiwix |
-| **Safe (Public Ingress)**   | `vmbr2` / `eth2`   | `10.20.20.1`  | Vaultwarden, Headscale (via Cloudflare Tunnel)                |
+| **Safe (Public Ingress)**   | `vmbr2` / `eth2`   | `10.20.20.1`  | Vaultwarden (`10.20.20.11`), Nginx Public (`10.20.20.10`) with Cloudflare Tunnel (Headscale decoupled/undecided) |
 | **Home Assistant (IoT)**    | `vmbr3` / `eth3`   | `10.30.30.1`  | Home Assistant core, Mosquitto MQTT & IoT sensors (VLAN 30 / Tailscale) |
-| **Unsafe (Online / Lab)**   | `vmbr4` / `eth4`   | `10.40.40.1`  | Tor obfs4, *Arr stack, qBittorrent (storage via host mount)   |
+| **Unsafe (Online / Lab)**   | `vmbr4` / `eth4`   | `10.40.40.1`  | *Arr stack, qBittorrent (storage via host mount)              |
 | **DMZ (Direct Ingress)**    | `vmbr5` / `eth5`   | `10.50.50.1`  | Asterisk/FreePBX VoIP, Self-Hosted Mail (Fail2ban, raw ports) |
 | **Management Bots**         | `vmbr6` / `eth6`   | `10.60.60.1`  | Isolated Telegram & automation bots with audited pinholes     |
-| **Database (Data Tier)**    | `vmbr7` / `eth7`   | `10.70.70.1`  | Central Multi-Tenant DB (PostgreSQL, Redis), DBBackup sync (Supabase/Neon) |
+| **Database (Data Tier)**    | `vmbr7` / `eth5`   | `10.70.70.1`  | Central Multi-Tenant DB (`10.70.70.10`: PostgreSQL 17, Redis 7), DBBackup sync |
 
 ---
 
@@ -106,11 +106,13 @@ The HP EliteDesk Mini PC currently runs several local services:
 | **Virtual Router (VM 100)** | OpenWrt 25.12.6 VM | `192.168.1.129` (`vmbr0`) | 🟢 **Live** | Standby `wan_vlan` (VLAN 100), gateway for `safe_internal`, `public_ingress`, and `ha_iot` zones |
 | **WAN Controller (LXC 200)**| Debian 12 LXC | `192.168.1.130` (`vmbr0`) | 🟢 **Live** | Nginx + Python API (`projects/01/wan-controller/app.py`), Web dashboard on port 80 |
 | **Pi-hole DNS Sinkhole (LXC 205)**| Debian 12 LXC | `192.168.1.135` (`vmbr0`) | 🟢 **Live** | Pi-hole v6.5, StevenBlack adult & ad blocklists (148k domains), strict fallback upstream (`projects/07-pihole-dns-sinkhole`) |
-| **Local Mini PC Services** | Docker on HP EliteDesk | `192.168.1.197` (LAN) | 🟢 **Live** | SearXNG, Ollama LLM, n8n, local Vaultwarden container |
+| **Local Mini PC Services** | Docker on HP EliteDesk | `192.168.1.197` (LAN) | 🟢 **Live** | SearXNG, Ollama LLM, n8n (Local Docker Vaultwarden stopped; migrated to Proxmox) |
 | **IoT Wi-Fi (VLAN 30)** | Archer C6 `radio0` | `10.30.30.0/24` (`vmbr3`) | 🟡 **Ready** | Specification complete (`EXP-003`). Ready to deploy upon entering hardware MACs. |
-| **Reverse Proxies (LXC 201/202)**| Proxmox LXC | `vmbr1` / `vmbr2` | ⚪ **Planned** | Phase 2 target (`projects/02-per-zone-nginx-proxies`) |
-| **Vaultwarden Migration** | Proxmox LXC | `10.20.20.11` (`vmbr2`) | ⚪ **Planned** | Phase 3 target (`projects/03-vaultwarden-service`), replacing PC Docker instance |
-| **Central Database (PG/Redis)** | Proxmox LXC | `10.70.70.10` (`vmbr7`) | ⚪ **Planned** | Multi-tenant PostgreSQL 16 & Redis container for Gitea, Immich, Vaultwarden |
+| **Public Reverse Proxy (`nginx-public` LXC 202)**| Debian 13 LXC | `10.20.20.10` (`vmbr2`) | 🟢 **Live** | Nginx reverse proxy + `cloudflared` tunnel daemon servicing `vault.snowfox.live` (`projects/02-per-zone-nginx-proxies`) |
+| **Vaultwarden Production Service (LXC 220)** | Debian 13 LXC (Docker) | `10.20.20.11` (`vmbr2`) | 🟢 **Live** | Production Vaultwarden (`:8443` HTTPS via Homelab CA), 127 ciphers live, backed by central PostgreSQL (`projects/03-vaultwarden-service`) |
+| **Central Database Service (LXC 210)** | Debian 13 LXC | `10.70.70.10` (`vmbr7`) | 🟢 **Live** | Multi-tenant PostgreSQL 17.11 (`scram-sha-256`, SSL enforced) + Redis 7 (`projects/12-central-database-service`) |
+| **Safe Internal Reverse Proxy (LXC 201)**| Proxmox LXC | `10.10.10.10` (`vmbr1`) | ⚪ **Planned** | Internal proxy for Gitea, Immich, n8n (`projects/02-per-zone-nginx-proxies`) |
+| **DBBackup Sync Container** | Proxmox LXC | `10.70.70.11` (`vmbr7`) | ⚪ **Planned** | Outbound cold-backup sync for Supabase & Neon, plus automated local pg_dumps |
 | **DBBackup Sync Container** | Proxmox LXC | `10.70.70.11` (`vmbr7`) | ⚪ **Planned** | Outbound cold-backup sync for Supabase & Neon, plus automated local pg_dumps |
 | **Home Assistant Core** | Proxmox VM / LXC | `10.30.30.5` (`vmbr3`) | ⚪ **Planned** | Planned smart home hub with native Tailscale |
 | **Mosquitto MQTT Broker** | Proxmox LXC | `10.30.30.2` (`vmbr3`) | ⚪ **Planned** | Planned broker for ESP32/ESP8266 telemetry (`EXP-003`) |

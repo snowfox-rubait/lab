@@ -32,9 +32,9 @@ To maintain high availability and defense-in-depth, the network is partitioned i
  10.10.10.10               10.20.20.10                   10.30.30.10          (No Ingress Proxy)     (No HTTP Proxy)       (Dedicated Egress)
         │                         │                         │                     │                     │                     │
 ┌───────┴────────┐       ┌────────┴────────┐       ┌────────┴────────┐   ┌────────┴────────┐   ┌────────┴────────┐   ┌────────┴────────┐
-Central DB, n8n,          Vaultwarden,              HA Core, Mosquitto    Tor obfs4, *Arr,      Asterisk FreePBX,     Router Controller,
-Gitea, Immich, NAS,       Headscale Control         MQTT, ESP Sensors     qBittorrent (Shared   Self-Hosted Mail      Vaultwarden Bot
-BookStack, Kiwix          (Cloudflare Tunnel)       (Tailscale Native)    Host Storage Mount)   (Fail2ban)            (Audited Pinholes)
+Central DB, n8n,          Vaultwarden Service       HA Core, Mosquitto    *Arr, qBittorrent,    Asterisk FreePBX,     Router Controller,
+Gitea, Immich, NAS,       (Sole Public Service)     MQTT, ESP Sensors     Local Lab Pipelines   Self-Hosted Mail      Vaultwarden Bot
+BookStack, Kiwix          (Cloudflare Tunnel)       (Tailscale Native)    Host Storage Mount    (Fail2ban)            (Audited Pinholes)
 ```
 
 ---
@@ -153,8 +153,8 @@ All homelab services live behind the OpenWrt VM, partitioned by protocol, access
 
 ## 📋 5. Next Implementation Milestones
 
-- [ ] **Configure Proxmox Bridges:** Define `vmbr1`, `vmbr2`, `vmbr3`, `vmbr4`, `vmbr5` in `/etc/network/interfaces` on Proxmox host.
-- [ ] **OpenWrt VM Virtual NICs:** Attach virtual interfaces for each bridge (`eth1` through `eth5`) to VM 100.
-- [ ] **Deploy `nginx-safe` (LXC 201):** Debian 12 on `vmbr1` (`10.10.10.10`) for Safe Internal services.
-- [ ] **Deploy `nginx-public` (LXC 202):** Debian 12 on `vmbr2` (`10.20.20.10`) running `cloudflared` for Vaultwarden and Headscale.
+- [x] **Configure Proxmox Bridges:** Defined `vmbr0`–`vmbr7`, `vmbr100` in `/etc/network/interfaces` on Proxmox host.
+- [x] **OpenWrt VM Virtual NICs:** Attached virtual interfaces for bridges to VM 100.
+- [x] **Deploy `nginx-public` (LXC 202):** Debian 13 on `vmbr2` (`10.20.20.10`) running `cloudflared` tunnel for Vaultwarden with Bangladesh Geo-Fence.
+- [ ] **Deploy `nginx-safe` (LXC 201):** Debian 13 on `vmbr1` (`10.10.10.10`) for Safe Internal services (Gitea, Immich, n8n).
 - [ ] **Configure OpenWrt Firewall Zones:** Establish zone drop rules enforcing unidirectional egress and strict quarantine for `vmbr4` and `vmbr5`.
