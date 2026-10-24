@@ -272,17 +272,17 @@ Configured on the physical Archer C6 router (`/etc/config/firewall`):
    - Outbound TCP and UDP port 853 traffic originating from `!mac_allowlist` is rejected with `REJECT`.
    - Forces Android "Private DNS" and iOS encrypted DNS clients to fall back to standard DNS (port 53), which is then intercepted and filtered.
 
-#### 2.4 Multi-Tier Pi-hole Group Filtering
+#### 2.4 Universal Protection Baseline & Group Architecture
 Utilized Pi-hole v6 FTL group management in `/etc/pihole/gravity.db`:
-- **Group 0 (Default):** Assigned Adlist 1 (Ads) and Adlist 2 (Adult/NSFW). Queries forwarded by Archer C6 (`192.168.1.1`) enter Group 0 and receive full parental filtering.
-- **Group 1 (`Whitelisted-AdBlockOnly`):** Assigned Adlist 1 only (Ads/malware blocked; adult content unrestricted). Whitelisted client IPs (`192.168.1.197`, `192.168.1.185`, `192.168.1.153`) querying Pi-hole directly are mapped to Group 1.
-- Allowlisted MACs also retain full network permission to query external resolvers (`1.1.1.1`, `8.8.8.8`) directly if complete bypass is desired.
+- **Universal Baseline Policy:** All devices across the entire network—whether personal, family repeater, or guest—are bound by the strict baseline: **zero adult/NSFW content, zero adware/trackers, zero known malicious domains**.
+- **Group 0 (Default):** Assigned Adlist 1 (Ads/malware) and Adlist 2 (Adult/NSFW). Queries arriving via Archer C6 (`192.168.1.1`) enter Group 0 and receive full parental filtering.
+- **Group 1 (`Whitelisted-Devices`):** Assigned Adlist 1 and Adlist 2. Personal allowlisted devices (`192.168.1.197`, `192.168.1.185`, `192.168.1.153`) share the exact same strict boundaries. They are maintained as a distinct group in the database so future custom restrictions can be added per tier without schema migration.
 
 ---
 
 ### 3. Verification & Test Results
 - **Direct Ad Sinkhole Test:** Querying `pagead2.googlesyndication.com` returns `0.0.0.0` (Blocked).
-- **Adult Filtering for Restricted Devices:** Querying `pornhub.com` via router `192.168.1.1` returns `0.0.0.0` (Blocked).
-- **Allowlisted Exemption:** Querying `pornhub.com` from PC `192.168.1.197` directly to Pi-hole resolves to valid upstream IP (`66.254.114.41`).
+- **Universal Adult Filtering:** Querying `pornhub.com` via router `192.168.1.1` returns `0.0.0.0` (Blocked).
+- **Universal Allowlisted Device Filtering:** Querying `pornhub.com` from PC `192.168.1.197` directly to Pi-hole returns `0.0.0.0` (Blocked).
 - **Firewall Ruleset:** `fw4 check` and `nft list chain inet fw4 dstnat_lan` confirmed active anti-bypass rules in kernel.
 

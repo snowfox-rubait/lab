@@ -170,8 +170,8 @@ To provide network-wide parental controls, adult website blocking, and ad filter
   - **Adlist 1:** StevenBlack Standard (`https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts`) — Adware, malware, and telemetry tracking.
   - **Adlist 2:** StevenBlack Unified Adult & NSFW (`https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/porn/hosts`) — Adult, pornographic, and explicit domains (**148,038 unique domains**).
 - **Group Mappings:**
-  - **Group 0 (`Default`):** Contains Adlist 1 + Adlist 2. All traffic forwarded from the physical router (`192.168.1.1`) enters this group and is subject to full ad and adult filtering.
-  - **Group 1 (`Whitelisted-AdBlockOnly`):** Contains Adlist 1 only (Adware blocked, adult content permitted). Allowlisted personal devices (`192.168.1.197`, `192.168.1.185`, `192.168.1.153`) querying Pi-hole directly enter this group.
+  - **Group 0 (`Default`):** Contains Adlist 1 + Adlist 2. All traffic forwarded from the physical router (`192.168.1.1`) and unmapped clients receive full ad, adult, and malware filtering.
+  - **Group 1 (`Whitelisted-Devices`):** Contains Adlist 1 + Adlist 2. Personal allowlisted devices (`192.168.1.197`, `192.168.1.185`, `192.168.1.153`) share the universal baseline (no adult, no harmful sites, no ads). Kept as a discrete group in the database so custom granular policies or future restrictions can be layered on top without restructuring.
 
 ### Useful Maintenance Commands:
 ```bash
