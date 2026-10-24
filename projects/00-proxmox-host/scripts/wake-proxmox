@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# /home/test/.local/bin/wake-proxmox / projects/00-proxmox-host/scripts/wake-proxmox
+# Broadcasts WoL Magic Packet to Proxmox VE Host (ThinkPad: b8:88:e3:e7:5e:1f)
+# Dispatches from local workstation socket and triggers router switch send
+
+echo "Sending WoL Magic Packet to Proxmox ThinkPad (b8:88:e3:e7:5e:1f)..."
+python3 -c "
+import socket
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+s.sendto(b'\xff'*6 + bytes.fromhex('b888e3e75e1f')*16, ('192.168.1.255', 9))
+"
+ssh router "/usr/bin/wake-proxmox" 2>/dev/null || true
+echo "Magic packets broadcasted across LAN and sent directly from OpenWrt switch."
+echo "Note: Proxmox requires 1-2 minutes after WoL to boot and sequentially start all VMs/LXCs."

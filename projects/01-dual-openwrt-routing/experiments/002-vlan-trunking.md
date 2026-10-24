@@ -69,8 +69,8 @@ By exploiting 802.1Q VLAN tagging on the Archer C6's MT7530 switch and Proxmox L
   set network.wan_vlan=interface
   set network.wan_vlan.device='eth5'
   set network.wan_vlan.proto='pppoe'
-  set network.wan_vlan.username='<YOUR_PPPOE_USERNAME>'
-  set network.wan_vlan.password='<YOUR_PPPOE_PASSWORD>'
+  set network.wan_vlan.username='$PPPOE_SECONDARY_USER'
+  set network.wan_vlan.password='$PPPOE_SECONDARY_PASS'
   set network.wan_vlan.metric='10'
   set network.wan_vlan.auto='0'
   commit network

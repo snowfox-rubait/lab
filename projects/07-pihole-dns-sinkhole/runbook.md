@@ -27,6 +27,10 @@ ssh proxmox "pct status 205"
 ```
 
 ### 2. Blocklist Updates & Gravity Refresh
+
+Pi-hole automatically pulls upstream blocklists once a week on Sunday at 04:07 UTC via `/etc/cron.d/pihole` (`7 4 * * 7 pihole ... pihole updateGravity`).
+
+For manual updates or immediate refreshes when adding new blocklists:
 ```bash
 # Update gravity database from remote upstream blocklists:
 ssh proxmox "pct exec 205 -- /usr/local/bin/pihole updateGravity"

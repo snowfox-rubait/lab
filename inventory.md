@@ -102,9 +102,9 @@ The HP EliteDesk Mini PC currently runs several local services:
 | Service / Node | Platform | Network Location | Status | Current Details / Source Files |
 | :--- | :--- | :--- | :--- | :--- |
 | **Physical Gateway** | TP-Link Archer C6 v3 | `192.168.1.1` (LAN) | 🟢 **Live** | Mode 1 PPPoE, `wan-mode` script, strictorder DNS upstream, fw4 MAC allowlist & anti-bypass DNAT |
-| **Proxmox Hypervisor** | ThinkPad Laptop | `192.168.1.2` (`vmbr0`) | 🟢 **Live** | PVE 9.2.2, kernel 7.0, `power-manager.sh` (`projects/00/scripts/power-manager.sh`), `wol.service` |
+| **Proxmox Hypervisor** | ThinkPad Laptop | `192.168.1.2` (`vmbr0`) | 🟢 **Live** | PVE 9.2.2, kernel 7.0, `power-manager.sh` (`projects/00-proxmox-host/scripts/power-manager.sh`), `wake-proxmox` (`projects/00-proxmox-host/scripts/wake-proxmox`), `wol.service` |
 | **Virtual Router (VM 100)** | OpenWrt 25.12.6 VM | `192.168.1.129` (`vmbr0`) | 🟢 **Live** | Standby `wan_vlan` (VLAN 100), gateway for `safe_internal`, `public_ingress`, and `ha_iot` zones |
-| **WAN Controller (LXC 200)**| Debian 12 LXC | `192.168.1.130` (`vmbr0`) | 🟢 **Live** | Nginx + Python API (`projects/01/wan-controller/app.py`), Web dashboard on port 80 |
+| **WAN Controller (LXC 200)**| Debian 12 LXC | `192.168.1.130` (`vmbr0`) | 🟢 **Live** | Nginx + Python API (`projects/01-dual-openwrt-routing/wan-controller/app.py`), Web dashboard on port 80 |
 | **Pi-hole DNS Sinkhole (LXC 205)**| Debian 12 LXC | `192.168.1.135` (`vmbr0`) | 🟢 **Live** | Pi-hole v6.5, StevenBlack adult & ad blocklists (148k domains), strict fallback upstream (`projects/07-pihole-dns-sinkhole`) |
 | **Local Mini PC Services** | Docker on HP EliteDesk | `192.168.1.197` (LAN) | 🟢 **Live** | SearXNG, Ollama LLM, n8n (Local Docker Vaultwarden stopped; migrated to Proxmox) |
 | **IoT Wi-Fi (VLAN 30)** | Archer C6 `radio0` | `10.30.30.0/24` (`vmbr3`) | 🟡 **Ready** | Specification complete (`EXP-003`). Ready to deploy upon entering hardware MACs. |
@@ -112,9 +112,12 @@ The HP EliteDesk Mini PC currently runs several local services:
 | **Vaultwarden Production Service (LXC 220)** | Debian 13 LXC (Docker) | `10.20.20.11` (`vmbr2`) | 🟢 **Live** | Production Vaultwarden (`:8443` HTTPS via Homelab CA), 127 ciphers live, backed by central PostgreSQL (`projects/03-vaultwarden-service`) |
 | **Central Database Service (LXC 210)** | Debian 13 LXC | `10.70.70.10` (`vmbr7`) | 🟢 **Live** | Multi-tenant PostgreSQL 17.11 (`scram-sha-256`, SSL enforced) + Redis 7 (`projects/12-central-database-service`) |
 | **Safe Internal Reverse Proxy (LXC 201)**| Proxmox LXC | `10.10.10.10` (`vmbr1`) | ⚪ **Planned** | Internal proxy for Gitea, Immich, n8n (`projects/02-per-zone-nginx-proxies`) |
+| **Gitea Git Server (LXC 260)** | Proxmox LXC | `10.10.10.15` (`vmbr1`) | ⚪ **Planned** | Self-hosted Git server backed by central PostgreSQL (`db-central`) |
+| **n8n Automation Engine (LXC 240)** | Proxmox LXC | `10.10.10.25` (`vmbr1`) | ⚪ **Planned** | Workflow & security incident automation hub (`projects/08-n8n-workflow-automation`) |
 | **DBBackup Sync Container** | Proxmox LXC | `10.70.70.11` (`vmbr7`) | ⚪ **Planned** | Outbound cold-backup sync for Supabase & Neon, plus automated local pg_dumps |
 | **Home Assistant Core** | Proxmox VM / LXC | `10.30.30.5` (`vmbr3`) | ⚪ **Planned** | Planned smart home hub with native Tailscale |
 | **Mosquitto MQTT Broker** | Proxmox LXC | `10.30.30.2` (`vmbr3`) | ⚪ **Planned** | Planned broker for ESP32/ESP8266 telemetry (`EXP-003`) |
+| **Suricata / Snort L7 DPI** | Proxmox LXC / VM | `10.50.50.10` (`vmbr5`) | ⚪ **Planned** | L7 deep packet inspection, TLS SNI filtering, and automated threat mitigation (`knowledge/security-anti-bypass-vpn-dns-defense`) |
 | **Management Bots (LXC)** | Proxmox LXC | `10.60.60.10` (`vmbr6`) | ⚪ **Planned** | Planned isolated bot container with forced-command SSH wrapper |
 
 ---

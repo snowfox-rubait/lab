@@ -146,6 +146,39 @@ To guarantee the laptop wakes up at 7:00 AM regardless of motherboard S5 power s
 - **Secondary Wake Engine (Host `rtcwake`):**
   Sets the hardware RTC alarm at midnight shutdown as an internal fallback.
 
+### On-Demand Wake-on-LAN & Cold-Boot Latency
+When the hypervisor is offline or sleeping, it can be awakened on-demand at any time:
+```bash
+# From Workstation PC (local script broadcasts LAN packet & calls router switch):
+wake-proxmox
+
+# Directly from the physical OpenWrt router:
+ssh router "/usr/bin/wake-proxmox"
+# Or raw etherwake:
+ssh router "/usr/bin/etherwake -D -i br-lan b8:88:e3:e7:5e:1f"
+```
+
+> [!IMPORTANT]
+> **Boot Latency Notice (1 to 2 Minutes):**  
+> After sending the WoL magic packet, laptop hardware requires 30–45 seconds for motherboard BIOS POST, followed by Linux kernel loading and sequential guest initialization. Even after host SSH responds, allow **1 to 2 minutes** for OpenWrt VM 100, `db-central` (LXC 210), and `vaultwarden` (LXC 220) to reach full network and database convergence before accessing services.
+
+---
+
+## ⏱️ VM & LXC Startup Sequencing (`order=X,up=Y`)
+
+To eliminate startup race conditions (where applications crash because their gateway or central database is not yet listening), strict startup priorities and delays are configured across Proxmox guests:
+
+| Order | Guest ID | Hostname | Type | Delay (`up`) | Role & Dependency Rationale |
+| :---: | :---: | :--- | :---: | :---: | :--- |
+| **1** | `100` | `openwrt` | VM | `15s` | **Core Virtual Router:** Must boot first to initialize `vmbr1`–`vmbr7` routing, NAT, and gateway `10.70.70.1`. |
+| **2** | `210` | `db-central` | LXC | `10s` | **Central Database Tier:** Starts PostgreSQL 17.11 & Redis 7 so database sockets are ready for tenants. |
+| **3** | `220` | `vaultwarden` | LXC | `5s` | **Core Application:** Connects to PostgreSQL over `vmbr7` pinhole. Starts before reverse proxy. |
+| **4** | `202` | `nginx-public` | LXC | `5s` | **Public Ingress:** Starts Nginx reverse proxy and `cloudflared` tunnel daemon. |
+| **5** | `205` | `pihole-oob` | LXC | `0s` | **DNS Sinkhole:** Starts out-of-band DNS filtering on `vmbr0`. |
+| **6** | `200` | `wan-controller`| LXC | `0s` | **Management Scripts:** Lightweight Python/Nginx failover API. |
+
+For deep post-mortem analysis of startup timing, masquerade edge cases, and historical fixes, refer to [troubleshooting-and-post-mortem.md](troubleshooting-and-post-mortem.md).
+
 ---
 
 ## 📱 Mobile Device Wi-Fi MAC Randomization Notice
@@ -192,12 +225,15 @@ ssh proxmox "pct exec 205 -- /usr/local/bin/pihole status"
 # Reload gravity blocklists without restarting DNS:
 ssh proxmox "pct exec 205 -- /usr/local/bin/pihole reloaddns"
 
-# Update gravity blocklists from upstreams:
+# Manually trigger gravity blocklist update:
 ssh proxmox "pct exec 205 -- /usr/local/bin/pihole updateGravity"
 
 # Inspect group and client assignments in gravity database:
 ssh proxmox "pct exec 205 -- sqlite3 /etc/pihole/gravity.db 'SELECT c.ip, c.comment, g.name FROM client c JOIN client_by_group cbg ON c.id=cbg.client_id JOIN \"group\" g ON cbg.group_id=g.id;'"
 ```
+
+> [!NOTE]
+> **Automated Gravity Updates:** Pi-hole automatically updates its ad and adult gravity database every week on Sunday morning at 04:07 UTC via `/etc/cron.d/pihole` (`7 4 * * 7 pihole ... pihole updateGravity`). Manual execution is only required when introducing new blocklist URLs.
 
 ---
 
@@ -205,7 +241,7 @@ ssh proxmox "pct exec 205 -- sqlite3 /etc/pihole/gravity.db 'SELECT c.ip, c.comm
 
 Proxmox VE is protected against local brute-force attacks on the Web GUI (`:8006`) and SSH (`:22`) via Fail2ban with `nftables-multiport` actions:
 
-- **Configuration:** `/etc/fail2ban/jail.local` (Tracked in [[services/jail.local]])
+- **Configuration:** `/etc/fail2ban/jail.local` (Tracked in [services/jail.local](services/jail.local))
 - **Active Jails:**
   - `proxmox`: Monitors `/var/log/pveproxy/access.log` (Bans IPs after 3 failed web logins for 24 hours).
   - `sshd`: Monitors systemd journal for SSH authentication failures (Aggressive mode, 24-hour ban).
@@ -214,7 +250,7 @@ Proxmox VE is protected against local brute-force attacks on the Web GUI (`:8006
   ```bash
   ssh proxmox "/usr/local/bin/fail2ban-summary"
   ```
-  *(Source tracked in [[scripts/fail2ban-summary]])*
+  *(Source tracked in [scripts/fail2ban-summary](scripts/fail2ban-summary))*
 - **Operational Commands:**
   ```bash
   # Check status of all jails:
