@@ -113,12 +113,19 @@ Managed by `/usr/local/bin/power-manager.sh` and `/etc/cron.d/power-manager` (tr
 Linux network drivers frequently disable Wake-on-LAN by default (`Wake-on: d`).
 To enable waking the laptop over Ethernet:
 
-- **Interface:** `enp12s0` (MAC mapped via `MAC_PROXMOX_BUILTIN` in `.env`)
+- **Interface:** `enp12s0` (Physical MAC: `b8:88:e3:e7:5e:1f`)
 - **Mode:** Magic Packet (`g`)
 - **Systemd Service:** `/etc/systemd/system/wol.service` (Ensures `ethtool -s enp12s0 wol g` is set on every system boot).
+- **Trigger Command from Workstation PC:**
+  ```bash
+  wake-proxmox
+  ```
+  *(Sends broadcast magic packet across LAN and triggers router `etherwake` directly)*
 - **Trigger Command from Router:**
   ```bash
-  ssh router "/usr/bin/etherwake -D -i br-lan \$(grep MAC_PROXMOX_BUILTIN /etc/homelab.env | cut -d= -f2)"
+  /usr/bin/wake-proxmox
+  # or direct command:
+  /usr/bin/etherwake -D -i br-lan b8:88:e3:e7:5e:1f
   ```
 
 ---
