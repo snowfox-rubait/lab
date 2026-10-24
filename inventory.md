@@ -64,13 +64,13 @@ The HP EliteDesk Mini PC currently runs several local services:
 
 | Zone / Subnet               | VLAN / Bridge      | Gateway IP    | Intended Purpose                                              |
 | :-------------------------- | :----------------- | :------------ | :------------------------------------------------------------ |
-| **Home LAN / OOB**          | `vmbr0` / `br-lan` | `192.168.1.1` | Wi-Fi devices, PC, Proxmox host management, LXC 200, Pi-hole  |
+| **Home LAN / OOB**          | `vmbr0` / `eth0`   | `192.168.1.1` | Wi-Fi devices, PC, Proxmox host management, LXC 200, Pi-hole  |
 | **Safe (Internal Apps)**    | `vmbr1` / `eth1`   | `10.10.10.1`  | Private internal apps: Gitea, Immich, NAS, n8n, BookStack, Kiwix |
 | **Safe (Public Ingress)**   | `vmbr2` / `eth2`   | `10.20.20.1`  | Vaultwarden (`10.20.20.11`), Nginx Public (`10.20.20.10`) with Cloudflare Tunnel (Headscale decoupled/undecided) |
 | **Home Assistant (IoT)**    | `vmbr3` / `eth3`   | `10.30.30.1`  | Home Assistant core, Mosquitto MQTT & IoT sensors (VLAN 30 / Tailscale) |
-| **Unsafe (Online / Lab)**   | `vmbr4` / `eth4`   | `10.40.40.1`  | *Arr stack, qBittorrent (storage via host mount)              |
-| **DMZ (Direct Ingress)**    | `vmbr5` / `eth5`   | `10.50.50.1`  | Asterisk/FreePBX VoIP, Self-Hosted Mail (Fail2ban, raw ports) |
-| **Management Bots**         | `vmbr6` / `eth6`   | `10.60.60.1`  | Isolated Telegram & automation bots with audited pinholes     |
+| **Unsafe (Online / Lab)**   | `vmbr4` *(Planned)*| `10.40.40.1`  | *Arr stack, qBittorrent (storage via host mount)              |
+| **DMZ (Direct Ingress)**    | `vmbr5` *(Planned)*| `10.50.50.1`  | Asterisk/FreePBX VoIP, Self-Hosted Mail (Fail2ban, raw ports) |
+| **Management Bots**         | `vmbr6` *(Planned)*| `10.60.60.1`  | Isolated Telegram & automation bots with audited pinholes     |
 | **Database (Data Tier)**    | `vmbr7` / `eth5`   | `10.70.70.1`  | Central Multi-Tenant DB (`10.70.70.10`: PostgreSQL 17, Redis 7), DBBackup sync |
 
 ---

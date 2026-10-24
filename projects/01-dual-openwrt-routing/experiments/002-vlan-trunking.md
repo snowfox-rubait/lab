@@ -81,7 +81,7 @@ By exploiting 802.1Q VLAN tagging on the Archer C6's MT7530 switch and Proxmox L
 ## 📊 Observations & Verification
 - Ran `tcpdump -i eth5 -c 5 -e -nn` inside OpenWrt VM:
   - Captured live Layer-2 ISP broadcast packets and PPPoE discovery frames flowing over the single cable.
-- Permanent static lease added for OpenWrt VM on physical router (`<MAC_OPENWRT_VM>` ➔ `192.168.1.129`).
+- Permanent static lease added for OpenWrt VM on physical router (`bc:24:11:d4:16:9f` ➔ `192.168.1.129`).
 - Created `/usr/bin/wan-mode` script on the physical router to toggle between:
   - **Mode 1:** Physical Router Main.
   - **Mode 2:** OpenWrt VM Main (with 45s self-healing watchdog).

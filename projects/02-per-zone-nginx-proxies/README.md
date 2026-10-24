@@ -86,8 +86,8 @@ All homelab services live behind the OpenWrt VM, partitioned by protocol, access
 - **Reverse Proxy:** `nginx-public` (LXC 202, `10.20.20.10`)
 - **Access Model:** Inbound access via Cloudflare Tunnel (`cloudflared`) with Cloudflare Orange Proxy, GeoIP restrictions, and TLS termination.
 - **Hosted Services:**
-  - `Vaultwarden`: Password manager vault (locked down `/admin`, MFA required)
-  - `Headscale`: Self-hosted Tailscale coordination server
+  - `Vaultwarden`: Password manager vault (locked down `/admin`, MFA required, HTTPS `:8443` via internal Homelab PKI)
+  - *(Note: Headscale has been decoupled from `vmbr2` and deferred as undecided)*
 - **Firewall Policy:** Traffic can only enter via Cloudflare Tunnel. Strictly isolated: cannot initiate connections into `vmbr1` (Safe Internal) or `vmbr0` (Home LAN).
 
 ### 3.3 Zone 3: Home Assistant & IoT (`vmbr3` - `10.30.30.0/24`)
@@ -104,7 +104,7 @@ All homelab services live behind the OpenWrt VM, partitioned by protocol, access
   - Zero access to Home LAN (`vmbr0`), router admin (SSH/LuCI), internal storage (`vmbr1`), or external WAN (optional UDP 123 NTP). IoT microcontrollers can only publish/subscribe to Mosquitto (`10.30.30.2:1883`).
 
 ### 3.4 Zone 4: Unsafe / Online Workloads (`vmbr4` - `10.40.40.0/24`)
-- **Gateway:** `10.40.40.1` (OpenWrt `eth4`)
+- **Gateway:** `10.40.40.1` (Target OpenWrt interface)
 - **Reverse Proxy:** **None** (Outbound only).
 - **Access Model:** Services in this zone initiate outbound connections to the internet or connect through external VPNs/proxies.
 - **Hosted Services:**
@@ -116,7 +116,7 @@ All homelab services live behind the OpenWrt VM, partitioned by protocol, access
 - **Firewall Policy:** Drop all packets destined for `vmbr0`, `vmbr1`, `vmbr2`, `vmbr3`, `vmbr5`, or `vmbr6`. Completely quarantined.
 
 ### 3.5 Zone 5: Protocol Direct DMZ (`vmbr5` - `10.50.50.0/24`)
-- **Gateway:** `10.50.50.1` (OpenWrt `eth5`)
+- **Gateway:** `10.50.50.1` (Target OpenWrt interface)
 - **Reverse Proxy:** **None** (Non-HTTP protocol services).
 - **Access Model:** Direct port forwarding through OpenWrt firewall with strict Fail2ban / CrowdSec IP banning.
 - **Hosted Services:**
@@ -125,7 +125,7 @@ All homelab services live behind the OpenWrt VM, partitioned by protocol, access
 - **Firewall Policy:** Strict port forwarding pinholes; rate-limiting; hard isolation preventing access to `vmbr1` internal services.
 
 ### 3.6 Zone 6: Management & Telegram Bots (`vmbr6` - `10.60.60.0/24`)
-- **Gateway:** `10.60.60.1` (OpenWrt `eth6`)
+- **Gateway:** `10.60.60.1` (Target OpenWrt interface)
 - **Reverse Proxy:** **None** (Outbound polling to `api.telegram.org`).
 - **Access Model:** Dedicated bot runtime zone with audited firewall pinholes.
 - **Hosted Services:**
@@ -134,8 +134,21 @@ All homelab services live behind the OpenWrt VM, partitioned by protocol, access
 - **Firewall Policy & Security Boundaries:**
   - Default drop toward all zones; explicit pinholes permitted only for:
     - Destination `192.168.1.1:22` (Router SSH restricted via forced-command script)
-    - Destination `10.20.20.11:8085` (Vaultwarden API: `POST /admin/invite` with admin token)
+    - Destination `10.20.20.11:8443` (Vaultwarden API: `POST /admin/invite` with admin token via internal HTTPS)
   - **SSH Hard Boundary Enforcement:** Dropbear on the router enforces `command="/usr/bin/bot-command-wrapper",no-pty,restrict` on the bot's public key, preventing any interactive root shell, PPPoE password reads, or factory resets.
+
+### 3.7 Zone 7: Dedicated Database Tier (`vmbr7` - `10.70.70.0/24`)
+- **Gateway:** `10.70.70.1` (OpenWrt `eth5` / `net5`)
+- **Reverse Proxy:** **None** (Offline compute tier, zero direct internet egress).
+- **Access Model:** Internal database socket access strictly through audited firewall pinholes.
+- **Hosted Services:**
+  - `db-central` (LXC 210, `10.70.70.10`): Central PostgreSQL 17.11 & Redis 7 cluster.
+  - `DBBackup` (LXC, `10.70.70.11`): Automated local database dumps & cloud sync (Supabase/Neon).
+- **Firewall Policy & Security Boundaries:**
+  - Default drop on all cross-zone traffic; pinholes permitted only for:
+    - Vaultwarden (`10.20.20.11`) $\rightarrow$ PostgreSQL (`10.70.70.10:5432` with SCRAM-SHA-256 and SSL enforced).
+    - Safe Internal (`10.10.10.0/24` - Gitea, Immich, n8n) $\rightarrow$ PostgreSQL (`:5432`) & Redis (`:6379`).
+  - Outbound internet access completely blocked for `db-central`.
 
 ---
 

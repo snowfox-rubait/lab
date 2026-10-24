@@ -54,8 +54,9 @@ LXC 210: db-central (10.70.70.10 on vmbr7)
 - Deploy compiled binary or containerized lightweight runtime.
 - Point `DATABASE_URL` to:
   ```env
-  DATABASE_URL=postgresql://vaultwarden_user:<PASSWORD>@10.70.70.10:5432/vaultwarden_db
-  ROCKET_PORT=8085
+  DATABASE_URL=postgresql://vaultwarden_user:<PASSWORD>@10.70.70.10:5432/vaultwarden_db?sslmode=require
+  ROCKET_TLS={certs="/data/ssl/server.crt",key="/data/ssl/server.key"}
+  DOMAIN=https://vault.snowfox.live
   WEBSOCKET_ENABLED=true
   SIGNUPS_ALLOWED=false
   INVITATIONS_ALLOWED=true

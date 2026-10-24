@@ -149,7 +149,7 @@ Key architectural risks and challenges identified:
 - **Problem:** Placing Telegram bots in `vmbr4` (untrusted P2P zone) or `vmbr2` (public tunnel zone) compromises their security requirements.
 - **Decision:** Created dedicated bridge `vmbr6` (`10.60.60.0/24`) for administrative and automation bots. Default policy is drop toward all internal zones, with audited firewall pinholes permitted only for:
   - Destination `192.168.1.1:22` (Router SSH management bot)
-  - Destination `10.20.20.11:8085` (Vaultwarden invitation API)
+  - Destination `10.20.20.11:8443` (Vaultwarden invitation API via internal HTTPS)
 
 #### 1.4 Vaultwarden Admin Confinement
 - **Decision:** Confined Vaultwarden `/admin` strictly to local administrator workstation (`192.168.1.197/32`) and Safe Zone (`10.10.10.0/24`). Tailscale, public Cloudflare tunnel, and unprivileged containers in `10.20.20.0/24` are completely blocked with hard 404 or immediate deny responses.
