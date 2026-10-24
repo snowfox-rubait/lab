@@ -26,7 +26,7 @@ Building on the single-cable 802.1Q VLAN trunking proven in [[002-vlan-trunking|
 1. A secondary 802.1Q tag (`VLAN 30`) can be established on the same physical link between Archer C6 (`lan3.30`) and Proxmox (`enp12s0.30`).
 2. An isolated Virtual Access Point (VAP) on the Archer C6's 2.4GHz radio (`radio0`) with Layer-2 client isolation and hardware MAC allowlisting can be bridged directly into `lan3.30`.
 3. By setting `proto 'none'` on the physical router's bridge, the Archer C6 maintains zero IP presence on the IoT network, preventing microcontrollers from reaching the router's SSH or LuCI administration portals.
-4. Frames from the ESP32 and ESP8266 will pass transparently across the physical trunk directly into Proxmox `vmbr3`, where OpenWrt VM (VM 100 `eth3`) provides DHCP leases in `10.30.30.0/24` and routes telemetry directly to the local Mosquitto MQTT broker (`10.30.30.10:1883`).
+4. Frames from the ESP32 and ESP8266 will pass transparently across the physical trunk directly into Proxmox `vmbr3`, where OpenWrt VM (VM 100 `eth3`) provides DHCP leases in `10.30.30.0/24` and routes telemetry directly to the local Mosquitto MQTT broker (`10.30.30.2:1883`).
 
 ---
 
@@ -59,7 +59,7 @@ flowchart LR
         PVE_NIC["enp12s0.30"]
         VMBR3["vmbr3 Linux Bridge"]
         VM100_NIC["VM 100 net3 (eth3)<br/>Gateway: 10.30.30.1<br/>DHCP Server"]
-        Mosquitto["Mosquitto MQTT LXC<br/>10.30.30.10:1883"]
+        Mosquitto["Mosquitto MQTT LXC<br/>10.30.30.2:1883"]
         HA["Home Assistant Core"]
 
         PVE_NIC --- VMBR3
@@ -203,7 +203,7 @@ uci set firewall.iot_mqtt.name='Allow-IoT-MQTT-Mosquitto'
 uci set firewall.iot_mqtt.src='ha_iot'
 uci set firewall.iot_mqtt.dest='ha_iot'
 uci set firewall.iot_mqtt.proto='tcp'
-uci set firewall.iot_mqtt.dest_ip='10.30.30.10'
+uci set firewall.iot_mqtt.dest_ip='10.30.30.2'
 uci set firewall.iot_mqtt.dest_port='1883'
 uci set firewall.iot_mqtt.target='ACCEPT'
 
@@ -221,7 +221,7 @@ uci commit firewall
 | **MAC Filtering** | Connect ESP32 / ESP8266 | Association succeeds, static IP assigned (`10.30.30.10`) |
 | **Physical Router Isolation** | Ping `192.168.1.1` from ESP | Destination Host Unreachable / Dropped |
 | **Home LAN Isolation** | Ping `192.168.1.197` (PC) from ESP | Request Timed Out / Dropped |
-| **MQTT Connectivity** | ESP publishes MQTT packet to `10.30.30.10:1883` | Connects and publishes successfully |
+| **MQTT Connectivity** | ESP publishes MQTT packet to `10.30.30.2:1883` | Connects and publishes successfully |
 | **WAN Isolation** | ESP attempts outbound HTTP/HTTPS ping to internet | Dropped by OpenWrt VM firewall |
 
 ---

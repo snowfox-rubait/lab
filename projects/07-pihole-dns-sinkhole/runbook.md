@@ -110,10 +110,18 @@ To verify that family devices maintain filtered internet connectivity when Proxm
    ```
 2. Run DNS queries through the physical router (`192.168.1.1`):
    ```bash
-   # Router automatically forwards to Cloudflare for Families (1.1.1.3):
-   ssh router "nslookup pornhub.com 127.0.0.1"   # Returns 0.0.0.0 (Cloudflare for Families block)
-   ssh router "nslookup google.com 127.0.0.1"    # Resolves normally
+   # Router automatically forwards sequentially to Cloudflare for Families (1.1.1.3):
+   ssh router "time nslookup pornhub.com 127.0.0.1"
    ```
+   **Observed Benchmark Result:**
+   ```
+   Server:      127.0.0.1
+   Address:     127.0.0.1:53
+   Name:        pornhub.com
+   Address:     0.0.0.0
+   real:        0m 2.51s
+   ```
+   *(Note: The 2.5-second latency is dnsmasq waiting for the primary UDP socket timeout before querying 1.1.1.3. Once cached, subsequent queries resolve in 0.00s).*
 3. Restart Pi-hole container:
    ```bash
    ssh proxmox "pct start 205"

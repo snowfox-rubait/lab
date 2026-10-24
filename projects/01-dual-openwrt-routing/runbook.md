@@ -89,19 +89,19 @@ add_list dhcp.@dnsmasq[0].server='8.8.8.8'        # 4. Google Public DNS (Emerge
 When Proxmox powers down at midnight (00:00 to 07:00), Pi-hole (`192.168.1.135`) goes offline. Because `strictorder` is enabled, dnsmasq seamlessly fails over to `1.1.1.3` (Cloudflare for Families). This guarantees that adult and malware blocking remains 100% active for family devices even while the server sleeps.
 
 ### 2. MAC Allowlist Configuration (`fw4` ipset)
-The router maintains an nftables Layer-2 set of authorized management and personal devices in `/etc/config/firewall`:
+The router maintains an nftables Layer-2 set of authorized management and personal devices in `/etc/config/firewall` (sourced from the local `.env` file):
 ```uci
 config ipset 'mac_allowlist'
 	option name 'mac_allowlist'
 	option match 'src_mac'
-	list entry '94:b8:6d:59:b8:6b'  # Main Workstation PC
-	list entry 'e2:ff:e0:37:df:5e'  # User Realme P1 5G Phone
-	list entry '60:36:dd:50:c6:8e'  # ThinkPad Wi-Fi NIC
-	list entry 'b8:88:e3:e7:5e:1f'  # Proxmox Built-in Ethernet
-	list entry '10:62:e5:00:9f:8f'  # Proxmox Legacy NIC
-	list entry 'bc:24:11:1c:d6:80'  # Pi-hole LXC 205 (Required to prevent upstream query loop)
-	list entry 'bc:24:11:eb:6f:6e'  # WAN Controller LXC 200
-	list entry 'bc:24:11:d4:16:9f'  # OpenWrt VM 100
+	list entry '$MAC_MAIN_PC'            # Main Workstation PC
+	list entry '$MAC_PHONE'              # User Mobile Phone
+	list entry '$MAC_PROXMOX_WIFI'        # ThinkPad Wi-Fi NIC
+	list entry '$MAC_PROXMOX_BUILTIN'     # Proxmox Built-in Ethernet
+	list entry '$MAC_PROXMOX_LEGACY'      # Proxmox Legacy NIC
+	list entry '$MAC_PIHOLE_OOB'          # Pi-hole LXC 205 (Required to prevent upstream query loop)
+	list entry '$MAC_LXC_WAN_CONTROLLER'  # WAN Controller LXC 200
+	list entry '$MAC_OPENWRT_VM'          # OpenWrt VM 100
 ```
 
 ### 3. Anti-Bypass Firewall Rules

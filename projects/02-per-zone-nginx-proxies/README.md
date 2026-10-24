@@ -101,7 +101,7 @@ All homelab services live behind the OpenWrt VM, partitioned by protocol, access
   - Physical Archer C6 router broadcasts dedicated 2.4GHz SSID with reduced TX power (10 dBm) and client isolation (`isolate '1'`).
   - Strict Layer-2 802.11 MAC filtering allowlist exclusively for ESP32 and ESP8266 hardware MACs (tracked in `.env`).
   - Bridged into `vmbr3` via 802.1Q VLAN 30 over the existing inter-router trunk link.
-  - Zero access to Home LAN (`vmbr0`), router admin (SSH/LuCI), internal storage (`vmbr1`), or external WAN (optional UDP 123 NTP). IoT microcontrollers can only publish/subscribe to Mosquitto (`10.30.30.10:1883`).
+  - Zero access to Home LAN (`vmbr0`), router admin (SSH/LuCI), internal storage (`vmbr1`), or external WAN (optional UDP 123 NTP). IoT microcontrollers can only publish/subscribe to Mosquitto (`10.30.30.2:1883`).
 
 ### 3.4 Zone 4: Unsafe / Online Workloads (`vmbr4` - `10.40.40.0/24`)
 - **Gateway:** `10.40.40.1` (OpenWrt `eth4`)

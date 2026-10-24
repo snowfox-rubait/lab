@@ -114,7 +114,11 @@ HTML = """<!DOCTYPE html>
             if(!confirm("Switch to Mode " + mode + "?")) return;
             document.getElementById("loading").style.display = "block";
             try {
-                const res = await fetch("/api/set?mode=" + mode);
+                const res = await fetch("/api/set", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ mode: mode.toString() })
+                });
                 const data = await res.json();
                 document.getElementById("raw-output").textContent = data.output;
             } catch(e) {
@@ -147,24 +151,51 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps({"output": out}).encode())
         elif parsed.path == "/api/set":
-            params = urllib.parse.parse_qs(parsed.query)
-            mode = params.get("mode", ["1"])[0]
+            # State-changing operations via GET are strictly rejected to prevent CSRF
+            self.send_response(405)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": "Method Not Allowed. State mutations must use POST."}).encode())
+        else:
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html")
+            self.end_headers()
+            self.wfile.write(HTML.encode())
+
+    def do_POST(self):
+        parsed = urllib.parse.urlparse(self.path)
+        if parsed.path == "/api/set":
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(content_length).decode() if content_length > 0 else ""
+            
+            mode = None
+            # Support JSON payload
+            try:
+                data = json.loads(body)
+                mode = str(data.get("mode", ""))
+            except Exception:
+                pass
+
+            # Fallback to query parameter or form-encoded
+            if not mode:
+                params = urllib.parse.parse_qs(body or parsed.query)
+                mode = params.get("mode", [""])[0]
+
             if mode in ["1", "2", "3"]:
                 try:
                     out = subprocess.check_output(["ssh", "root@192.168.1.1", "wan-mode", mode], stderr=subprocess.STDOUT, timeout=15).decode()
                 except Exception as e:
                     out = str(e)
             else:
-                out = "Invalid mode"
+                out = f"Invalid mode: '{mode}'. Allowed: 1, 2, 3"
+
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
             self.wfile.write(json.dumps({"output": out}).encode())
         else:
-            self.send_response(200)
-            self.send_header("Content-Type", "text/html")
+            self.send_response(404)
             self.end_headers()
-            self.wfile.write(HTML.encode())
 
 with socketserver.TCPServer(("127.0.0.1", PORT), Handler) as httpd:
     httpd.serve_forever()

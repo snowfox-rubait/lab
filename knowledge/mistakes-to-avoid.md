@@ -45,3 +45,23 @@
 #### ❌ Omitting DNS anti-bypass firewall interception
 - **Problem:** Tech-savvy users, guest devices, or smart TVs can bypass network-wide parental controls simply by hardcoding static DNS (`8.8.8.8` or `1.1.1.1`) in network settings or turning on Android "Private DNS" (DoT port 853).
 - **Fix:** Configure `fw4` / nftables to transparently intercept port 53 (DNAT redirect to local router) and hard-reject port 853 for non-allowlisted devices.
+
+#### ❌ Assuming port-level DNS rules provide absolute 100% prevention
+- **Problem:** Port 53 DNAT and Port 853 rejection provide strong **DNS bypass resistance**, but do not stop DNS-over-HTTPS (DoH on port 443) or MAC spoofing.
+- **Fix:** Block the Firefox DoH canary domain (`use-application-dns.net`), drop known DoH bootstrap IPs, and recognize that MAC allowlists are operational heuristics that require disabling MAC randomization on client devices.
+
+---
+
+### 4. API Design & Web Management Services
+
+#### ❌ Exposing state-changing infrastructure APIs via unauthenticated HTTP GET
+- **Problem:** Writing endpoints like `GET /api/set?mode=...` without authentication allows any device on the LAN (or an untrusted website triggering a cross-site image load `<img src="http://192.168.1.130/api/set?mode=2">`) to execute a CSRF attack and flip physical router WAN modes.
+- **Fix:** State mutations must strictly require **HTTP POST**, enforce source IP allowlists (e.g. administrator workstation and hypervisor host only), and validate request payloads.
+
+---
+
+### 5. IP Address Planning & Subnet Allocation
+
+#### ❌ Overlapping IP assignments between server daemons and client static leases
+- **Problem:** Assigning the same IP (e.g. `10.30.30.10`) to both a central server (Mosquitto MQTT broker) and a DHCP client device (ESP32) creates an immediate ARP collision and breaks network routing.
+- **Fix:** Always maintain a single authoritative IP allocation table per subnet: reserve low IPs (`.2`–`.9`) for infrastructure daemons, middle IPs (`.10`–`.49`) for static client leases, and upper blocks (`.100`–`.200`) for dynamic DHCP pools.

@@ -2,7 +2,7 @@
 # Fallback to Mode 1 (Physical Router Main) to ensure home WAN stays active
 revert_wan_mode() {
     echo "Reverting router to Mode 1 (Physical Router Main)..."
-    curl -s -m 8 "http://192.168.1.130/api/set?mode=1" >/dev/null 2>&1 || true
+    curl -s -m 8 -X POST "http://192.168.1.130/api/set" -H "Content-Type: application/json" -d '{"mode":"1"}' >/dev/null 2>&1 || true
 }
 
 # Homelab Power Management & Auto-Wake daemon script

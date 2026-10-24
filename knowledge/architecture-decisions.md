@@ -56,7 +56,7 @@ Following the architecture redesign in ADR-001 through ADR-003, a comprehensive 
 - **Result:** All 6 virtual bridges (`vmbr1` through `vmbr6`) plus `vmbr100` are active in the Linux kernel and ready for container attachment.
 
 #### 2.4 LXC 200 Container & DNS Alignment
-- **Action:** Synchronized Proxmox metadata via `pct set 200 -hostname wan-controller` and created a static DHCP host reservation on the physical Archer C6 router (`bc:24:11:eb:6f:6e` ➔ `192.168.1.130`, `wan-controller.lan`).
+- **Action:** Synchronized Proxmox metadata via `pct set 200 -hostname wan-controller` and created a static DHCP host reservation on the physical Archer C6 router (`MAC_LXC_WAN_CONTROLLER` from `.env` ➔ `192.168.1.130`, `wan-controller.lan`).
 
 ---
 
@@ -114,7 +114,7 @@ Key architectural risks and challenges identified:
   - Sub-interface `lan3.30` on Archer C6 is combined with the `snowfox-iot` VAP in a zero-IP Layer-2 bridge (`br-iot`).
   - Proxmox bridges `enp12s0.30` into `vmbr3`.
   - OpenWrt VM serves DHCP leases in `10.30.30.0/24` with static leases for `MAC_ESP32` (`10.30.30.10`) and `MAC_ESP8266` (`10.30.30.11`).
-  - OpenWrt VM firewall strictly confines IoT devices to Mosquitto MQTT (`10.30.30.10:1883`), dropping all traffic toward other internal zones and the public WAN.
+  - OpenWrt VM firewall strictly confines IoT devices to Mosquitto MQTT (`10.30.30.2:1883`), dropping all traffic toward other internal zones and the public WAN.
 
 ---
 
@@ -137,7 +137,7 @@ Key architectural risks and challenges identified:
 
 #### 1.1 Automated WAN Mode 1 Fallback on Proxmox Shutdown
 - **Problem:** If Proxmox powers down (either due to the midnight power-schedule or battery discharging $\le 40\%$) while in Mode 2 (VM Main), the home LAN loses PPPoE connectivity until 7:00 AM.
-- **Decision:** Updated `/usr/local/bin/power-manager.sh` on Proxmox to execute `revert_wan_mode` (`curl -s -m 8 "http://192.168.1.130/api/set?mode=1"`) before all `shutdown` calls.
+- **Decision:** Updated `/usr/local/bin/power-manager.sh` on Proxmox to execute `revert_wan_mode` (`curl -s -m 8 -X POST "http://192.168.1.130/api/set" -H "Content-Type: application/json" -d '{"mode":"1"}'`) before all `shutdown` calls.
 - **Result:** Physical router always resumes active PPPoE dialing before the OpenWrt VM powers down.
 
 #### 1.2 Storage Bind-Mount Architecture (Eliminating Network Pinholes)
@@ -250,7 +250,7 @@ Enforcing parental controls, adult website blocking, and ad/malware filtering ac
 
 #### 2.1 Out-of-Band Pi-hole Deployment (LXC 205 on `vmbr0`)
 - **Container Architecture:** Provisioned Debian 12 LXC container 205 (`pihole-oob`) attached directly to the Out-of-Band Home LAN bridge (`vmbr0`) with static IP `192.168.1.135/24` (gateway `192.168.1.1`).
-- **Resource Footprint:** 1 vCPU, 512MB RAM, 4GB disk, `nesting=1`, `onboot=1` (MAC `bc:24:11:1c:d6:80`).
+- **Resource Footprint:** 1 vCPU, 512MB RAM, 4GB disk, `nesting=1`, `onboot=1` (MAC mapped via `MAC_PIHOLE_OOB` in `.env`).
 - **Filter Lists Applied:** Loaded StevenBlack Standard hosts (ad/malware tracking) alongside StevenBlack Unified Adult & NSFW blocklist (`https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/porn/hosts`), totaling **148,038 unique blocked domains**.
 
 #### 2.2 Router-Centric Strict-Order DNS Hierarchy
@@ -266,11 +266,7 @@ To solve the midnight hypervisor power-down dilemma while guaranteeing strict se
 #### 2.3 OpenWrt `fw4` (nftables) MAC Allowlist & Anti-Bypass Rules
 Configured on the physical Archer C6 router (`/etc/config/firewall`):
 1. **MAC Allowlist (`set mac_allowlist`):**
-   - Main Workstation PC (`94:b8:6d:59:b8:6b`)
-   - User Realme Phone (`e2:ff:e0:37:df:5e`)
-   - Proxmox Laptop Wi-Fi (`60:36:dd:50:c6:8e`)
-   - Proxmox Host Built-in & Legacy NICs (`b8:88:e3:e7:5e:1f`, `10:62:e5:00:9f:8f`)
-   - Infrastructure Containers: Pi-hole (`bc:24:11:1c:d6:80`), WAN Controller (`bc:24:11:eb:6f:6e`), OpenWrt VM (`bc:24:11:d4:16:9f`).
+   - Populated from `.env` hardware mappings: Main PC (`$MAC_MAIN_PC`), User Phone (`$MAC_PHONE`), Laptop Wi-Fi (`$MAC_PROXMOX_WIFI`), Proxmox Host NICs (`$MAC_PROXMOX_BUILTIN`, `$MAC_PROXMOX_LEGACY`), and Infrastructure Containers (`$MAC_PIHOLE_OOB`, `$MAC_LXC_WAN_CONTROLLER`, `$MAC_OPENWRT_VM`).
 2. **Transparent DNS Interception (DNAT Port 53):**
    - Any UDP or TCP port 53 packets originating from `!mac_allowlist` are intercepted and redirected directly to the local router (`192.168.1.1:53`).
    - Prevents non-allowlisted devices from manually overriding DNS in their network settings.

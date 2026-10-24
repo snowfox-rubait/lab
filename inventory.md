@@ -110,8 +110,8 @@ The HP EliteDesk Mini PC currently runs several local services:
 | **Vaultwarden Migration** | Proxmox LXC | `10.20.20.11` (`vmbr2`) | ⚪ **Planned** | Phase 3 target (`projects/03-vaultwarden-service`), replacing PC Docker instance |
 | **Central Database (PG/Redis)** | Proxmox LXC | `10.70.70.10` (`vmbr7`) | ⚪ **Planned** | Multi-tenant PostgreSQL 16 & Redis container for Gitea, Immich, Vaultwarden |
 | **DBBackup Sync Container** | Proxmox LXC | `10.70.70.11` (`vmbr7`) | ⚪ **Planned** | Outbound cold-backup sync for Supabase & Neon, plus automated local pg_dumps |
-| **Home Assistant Core** | Proxmox VM / LXC | `10.30.30.x` (`vmbr3`) | ⚪ **Planned** | Planned smart home hub with native Tailscale |
-| **Mosquitto MQTT Broker** | Proxmox LXC | `10.30.30.10` (`vmbr3`) | ⚪ **Planned** | Planned broker for ESP32/ESP8266 telemetry (`EXP-003`) |
+| **Home Assistant Core** | Proxmox VM / LXC | `10.30.30.5` (`vmbr3`) | ⚪ **Planned** | Planned smart home hub with native Tailscale |
+| **Mosquitto MQTT Broker** | Proxmox LXC | `10.30.30.2` (`vmbr3`) | ⚪ **Planned** | Planned broker for ESP32/ESP8266 telemetry (`EXP-003`) |
 | **Management Bots (LXC)** | Proxmox LXC | `10.60.60.10` (`vmbr6`) | ⚪ **Planned** | Planned isolated bot container with forced-command SSH wrapper |
 
 ---
@@ -139,7 +139,7 @@ Host openwrt-vm
     IdentityFile ~/.ssh/id_rsa_gemini_codeberg
 
 Host phone
-    HostName 192.168.1.179
+    HostName 192.168.1.185
     User u0_a344
     Port 8022
 
