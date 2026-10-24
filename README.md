@@ -14,6 +14,12 @@ Welcome to the lab repository. This vault tracks all architecture experiments, f
 - 🔧 **Troubleshooting Playbook:** [[lab/knowledge/troubleshooting-playbook|troubleshooting-playbook]]
 - 📝 **New Experiment Template:** [[lab/templates/experiment-template|experiment-template]]
 
+> [!IMPORTANT]
+> **Universal Service Granularity Standard:**  
+> Every individual service, engine, or subsystem—regardless of scale or complexity (e.g. `00-proxmox-host`, `01-dual-openwrt-routing`, `03-vaultwarden-service`, `07-pihole-dns-sinkhole`, and future services like Gitea, n8n, Home Assistant, Immich, etc.)—**MUST maintain its own dedicated project directory** under `projects/XX-<service-name>/`.
+> - Each project folder contains its own self-contained `README.md` (architecture, specs, dependencies), operational `runbook.md`, configuration templates, and experiment logs.
+> - Inter-service relationships, hypervisor hosting (`00-proxmox-host`), and router firewall rules (`01-dual-openwrt-routing`) maintain explicit cross-links to the component's dedicated project directory.
+
 ---
 
 ## 🗺️ Master Network & Service Architecture
@@ -208,3 +214,10 @@ flowchart TD
 - **Directory:** `projects/06-openwrt-telegram-bot/`
 - **Documentation:** [[lab/projects/06-openwrt-telegram-bot/README|OpenWrt Telegram Remote Control Bot Architecture & Spec]]
 - **Covers:** Safe remote commands, PPPoE/reset protection boundary, unknown station join alerts with [Allow] button, numeric ID allowlist, and off-router prototype vs on-router deployment.
+
+### 7. Pi-hole Out-of-Band DNS Sinkhole & Parental Controls
+- **Directory:** `projects/07-pihole-dns-sinkhole/`
+- **Documentation:** [[lab/projects/07-pihole-dns-sinkhole/README|Pi-hole Out-of-Band DNS Sinkhole & Parental Controls Architecture]]
+- **Runbook:** [[lab/projects/07-pihole-dns-sinkhole/runbook|Pi-hole Operations & Maintenance Runbook]]
+- **Current Live Status:** Live & Verified (Proxmox LXC 205 at `192.168.1.135` on `vmbr0`)
+- **Covers:** Hardware offload from Archer C6, StevenBlack unified adult & ad blocklists (148k domains), universal network-wide baseline, strict sequential upstream failover (`1.1.1.3` Cloudflare for Families during Proxmox midnight-7 AM sleep), and anti-bypass firewall DNAT/port 853 drops.

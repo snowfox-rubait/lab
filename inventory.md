@@ -13,7 +13,7 @@
 | **Physical Router** | Main Home Gateway & Wi-Fi AP   | TP-Link Archer C6 v3 (OpenWrt)      | `ssh router` (`192.168.1.1`)       |
 | **Mobile Node**     | Mobile Companion / Automations | Realme P1 5G (Termux + MacroDroid)  | `ssh phone`                        |
 | **Virtual Router**        | Test lab & Container Gateway        | OpenWrt 25.12.6 VM (Proxmox VM 100) | `ssh openwrt-vm` (`192.168.1.129`) |
-| **Pi-hole DNS Sinkhole**  | Out-of-Band Adblock & Parental Sink | Debian 12 LXC (Proxmox LXC 205)     | Web UI: `http://192.168.1.135/admin` |
+| **Pi-hole DNS Sinkhole**  | Out-of-Band Adblock & Parental Sink | Debian 12 LXC (Proxmox LXC 205)     | Web UI: `http://192.168.1.135/admin` (`projects/07-pihole-dns-sinkhole`) |
 
 ---
 
@@ -102,9 +102,7 @@ The HP EliteDesk Mini PC currently runs several local services:
 | **Proxmox Hypervisor** | ThinkPad Laptop | `192.168.1.2` (`vmbr0`) | 🟢 **Live** | PVE 9.2.2, kernel 7.0, `power-manager.sh` (`projects/00/scripts/power-manager.sh`), `wol.service` |
 | **Virtual Router (VM 100)** | OpenWrt 25.12.6 VM | `192.168.1.129` (`vmbr0`) | 🟢 **Live** | Standby `wan_vlan` (VLAN 100), gateway for `safe_internal`, `public_ingress`, and `ha_iot` zones |
 | **WAN Controller (LXC 200)**| Debian 12 LXC | `192.168.1.130` (`vmbr0`) | 🟢 **Live** | Nginx + Python API (`projects/01/wan-controller/app.py`), Web dashboard on port 80 |
-| **Pi-hole DNS Sinkhole (LXC 205)**| Debian 12 LXC | `192.168.1.135` (`vmbr0`) | 🟢 **Live** | Pi-hole v6.5, StevenBlack adult & ad blocklists (148k domains), Group 0 (Family) & Group 1 (Allowlisted) |
-| **Virtual Router (VM 100)** | OpenWrt 25.12.6 VM | `192.168.1.129` (`vmbr0`) | 🟢 **Live** | Standby `wan_vlan` (VLAN 100), gateway for `safe_internal`, `public_ingress`, and `ha_iot` zones |
-| **WAN Controller (LXC 200)**| Debian 12 LXC | `192.168.1.130` (`vmbr0`) | 🟢 **Live** | Nginx + Python API (`projects/01/wan-controller/app.py`), Web dashboard on port 80 |
+| **Pi-hole DNS Sinkhole (LXC 205)**| Debian 12 LXC | `192.168.1.135` (`vmbr0`) | 🟢 **Live** | Pi-hole v6.5, StevenBlack adult & ad blocklists (148k domains), strict fallback upstream (`projects/07-pihole-dns-sinkhole`) |
 | **Local Mini PC Services** | Docker on HP EliteDesk | `192.168.1.197` (LAN) | 🟢 **Live** | SearXNG, Ollama LLM, n8n, local Vaultwarden container |
 | **IoT Wi-Fi (VLAN 30)** | Archer C6 `radio0` | `10.30.30.0/24` (`vmbr3`) | 🟡 **Ready** | Specification complete (`EXP-003`). Ready to deploy upon entering hardware MACs. |
 | **Reverse Proxies (LXC 201/202)**| Proxmox LXC | `vmbr1` / `vmbr2` | ⚪ **Planned** | Phase 2 target (`projects/02-per-zone-nginx-proxies`) |

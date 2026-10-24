@@ -68,6 +68,7 @@ A dedicated container sits on the Home bridge (`vmbr0`) running Nginx and an int
 
 ## 🛡️ Wi-Fi Restrictions, Parental Controls & Anti-Bypass Firewall
 
+> **Dedicated Project Documentation:** [[../07-pihole-dns-sinkhole/README|07-pihole-dns-sinkhole]]  
 > **Architectural Decision Reference:** [[../../knowledge/architecture-decisions#ADR-005 Out-of-Band Pi-hole DNS Sinkhole and Strict Fallback Parental Controls|ADR-005]] and [[../../knowledge/architecture-decisions#15-wi-fi-parental-controls-via-mac-allowlist|ADR-002 §1.5]]
 
 To enforce adult content blocking, ad filtering, and malware protection across the entire physical Wi-Fi network (including parents' repeaters and guest clients) without overloading the router's 16MB flash/128MB RAM:

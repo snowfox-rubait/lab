@@ -152,6 +152,9 @@ To guarantee the laptop wakes up at 7:00 AM regardless of motherboard S5 power s
 
 ## 🛡️ Out-of-Band Pi-hole DNS Sinkhole (LXC 205: `pihole-oob`)
 
+> **Dedicated Project Documentation:** [[../07-pihole-dns-sinkhole/README|07-pihole-dns-sinkhole]]  
+> **Operations Runbook:** [[../07-pihole-dns-sinkhole/runbook|Pi-hole Runbook]]
+
 To provide network-wide parental controls, adult website blocking, and ad filtering without overloading the physical router's limited RAM/flash, a dedicated Pi-hole instance runs directly on the Out-of-Band management bridge (`vmbr0`).
 
 ### Container Specifications:
