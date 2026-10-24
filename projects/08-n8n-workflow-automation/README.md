@@ -58,6 +58,7 @@ An autonomous security watchdog that:
    - Name of the compromised account and username/email.
    - Direct recovery URL (resolving standard `/.well-known/change-password` or stored login URI).
    - Guidance requiring manual rotation of non-automatable factors (Passkeys/FIDO2, TOTP authenticator keys).
+6. **Cascades Workstation Malware Inspection (Project 10):** Dispatches a webhook to the Main PC's local security stack (`projects/10-workstation-av-edr-stack`) to trigger an immediate background ClamAV/YARA memory and browser-storage audit to verify that the breach did not originate from a local info-stealer Trojan.
 
 ### 3.2 Technical Feasibility Analysis
 

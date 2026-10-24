@@ -246,3 +246,9 @@ flowchart TD
 - **Documentation:** [[lab/projects/09-telegram-bot-hub/README|Centralized Telegram Bot & Alerting Hub]]
 - **Status:** Planned / Architecture & Security Blueprint
 - **Covers:** Central incident dispatching layer, interactive inline remediation buttons, direct password reset URL resolution (`/.well-known/change-password`), Proxmox SMART/backup alerts, and multi-service incident escalation.
+
+### 10. Workstation Antivirus / EDR Stack & Incident Auto-Response
+- **Directory:** `projects/10-workstation-av-edr-stack/`
+- **Documentation:** [[lab/projects/10-workstation-av-edr-stack/README|Workstation Antivirus / EDR Stack & Incident Auto-Response Architecture]]
+- **Status:** Planned / Architecture & Integration Blueprint
+- **Covers:** Host-level endpoint defense on Main PC (`rubait`), ClamAV signatures, YARA rules, osquery, eBPF telemetry, local Ollama AI alert triage, and automated info-stealer scans cascading from Vaultwarden breach reports.
