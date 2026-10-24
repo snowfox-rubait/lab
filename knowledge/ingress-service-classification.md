@@ -13,7 +13,7 @@ Not everything that uses the internet is a "public-facing online service." Confu
 | Service | Traffic Direction | Requires Public Ingress? | Needs Cloudflare Tunnel? | Access Mechanism |
 | :--- | :--- | :---: | :---: | :--- |
 | **Vaultwarden** | **Inbound (Public Ingress)** | **YES** | **YES** | `vault.snowfox.live` (Cloudflare Tunnel + BD Geo-Fence) |
-| **Headscale** | **Inbound (Public Ingress)** | **YES** | **Optional / Subdomain** | `vpn.snowfox.live` (WireGuard / HTTPS Coordination) |
+| **Headscale** | **Undecided / Future Evaluation** | **Deferred** | **Deferred** | Separated from `vmbr2`; deferred until core stack is battle-tested |
 | **Telegram Bots (06 & 09)** | **Outbound Only (Long-Polling)**| **NO** | **NO** | Egress polling to `api.telegram.org` (No listening port) |
 | **Gitea, Immich, BookStack**| **Inbound (Private LAN/Mesh)** | **NO** | **NO** | Tailscale / Safe Internal (`10.10.10.0/24`) |
 | **Home Assistant Core** | **Inbound (Private LAN/Mesh)** | **NO** | **NO** | Tailscale node in `vmbr3` (`10.30.30.10`) |
@@ -46,7 +46,8 @@ Your insight regarding MQTT and ESP boards is **100% correct and recommended**:
 
 ---
 
-## 🔄 Headscale Migration Strategy
+## 🔄 Headscale Migration Status (Deferred & Separated)
 
-1. **Phase 1 (Current):** Use official Tailscale coordination server. It is battle-tested, zero-maintenance, and provides instant secure mesh networking.
-2. **Phase 2 (Target):** Once the core homelab (OpenWrt dual routing, Pi-hole, Central Database, and Vaultwarden) has run with 100% stability, deploy Headscale on `vmbr2` as the self-hosted control plane, switching your devices from `login.tailscale.com` to `vpn.snowfox.live`.
+- **Separated from Public Bridge (`vmbr2`):** Headscale has been completely decoupled and removed from the active Public Ingress bridge (`vmbr2`) scope. Vaultwarden is currently the **sole** active service in the public ingress tier.
+- **Undecided Architecture:** Future hosting placement (whether an independent bridge, an isolated DMZ, or hosted separately) is marked as **Undecided**.
+- **Current Strategy:** Continue using official Tailscale for remote access. Headscale evaluation is completely out of current scope and deferred until the entire primary homelab fleet is battle-tested and mature.

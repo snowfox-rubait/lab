@@ -96,8 +96,8 @@ The baseline infrastructure is live under [[../projects/07-pihole-dns-sinkhole/R
 | **File Browser / NAS** | Debian LXC + Disk Passthrough| Safe Internal (`vmbr1`) | Low |
 | **Kiwix (Offline ZIM)** | Docker LXC | Safe Internal (`vmbr1`) | Low |
 | **BookStack** | Docker LXC (PHP/MariaDB) | Safe Internal (`vmbr1`) | Low |
-| **Vaultwarden** | Docker / Debian LXC | Public Ingress (`vmbr2`) | Medium |
-| **Headscale** | Debian LXC | Public Ingress (`vmbr2`) | Medium |
+| **Vaultwarden** | Docker in Debian 13 LXC | Public Ingress (`vmbr2`) | 🟢 **Live (`03-vaultwarden`)** |
+| **Headscale** | *Undecided / Separated* | *Deferred (Out of current scope)* | Medium |
 | **Home Assistant Core** | Dedicated Proxmox VM / LXC | Home Assistant & IoT (`vmbr3`) | Medium |
 | **MQTT Broker (Mosquitto)**| Debian / Alpine LXC | Home Assistant & IoT (`vmbr3`) | Low |
 | **qBittorrent + *Arr Stack** | Docker LXC + VPN + Host Mount | Unsafe Online (`vmbr4`)| Medium |

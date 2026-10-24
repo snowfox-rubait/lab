@@ -204,7 +204,7 @@ Specifically, several architectural misalignments were identified:
 To avoid configuration drift between documentation and Proxmox `/etc/network/interfaces`, all security tiers were assigned deterministic bridge IDs:
 - **`vmbr0` (`192.168.1.0/24`):** Physical Home LAN & Out-of-Band Management (PVE Host, physical router, LXC 200 WAN controller, OOB Pi-hole).
 - **`vmbr1` (`10.10.10.0/24`):** Safe Internal Zone (Private LAN, Central DB, Gitea, Immich, NAS, BookStack, n8n, Kiwix, Jellyfin, gray Cloudflare DNS via Tailscale).
-- **`vmbr2` (`10.20.20.0/24`):** Safe Public Zone (Cloudflare Tunnel ingress for Vaultwarden, Headscale control plane).
+- **`vmbr2` (`10.20.20.0/24`):** Safe Public Ingress Zone (Cloudflare Tunnel ingress for Vaultwarden; Headscale decoupled and deferred).
 - **`vmbr3` (`10.30.30.0/24`):** Dedicated IoT & Home Assistant Zone (Home Assistant core & integrations, isolated from general compute).
 - **`vmbr4` (`10.40.40.0/24`):** Unsafe / Ingress Online Services (Tor obfs4 node, *Arr stack, qBittorrent, public MQTT, Telegram bots).
 - **`vmbr5` (`10.50.50.0/24`):** Direct Protocol Ingress DMZ (Asterisk/FreePBX VoIP, self-hosted Mail).
