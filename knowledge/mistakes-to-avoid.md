@@ -29,3 +29,19 @@
 #### ❌ Hard-wiring physical interface names in bridge ports before verifying existence
 - **Problem:** Adding missing network cards to `/etc/network/interfaces` bridge-ports causes `ifreload -a` to fail.
 - **Fix:** Always verify present interfaces with `ip -brief link` first.
+
+---
+
+### 3. DNS Filtering, Sinkholes & Parental Controls
+
+#### ❌ Advertising multiple DNS servers directly via DHCP to client devices
+- **Problem:** Client operating systems (Windows, Android, iOS) do not treat DHCP-advertised DNS servers as strict primary and secondary. Instead, they query them concurrently or round-robin. If an unfiltered secondary DNS is announced via DHCP, filtered queries leak and bypass blocking entirely.
+- **Fix:** Advertise **only** the local physical router's IP (`192.168.1.1`) via DHCP, and let the router manage sequential upstream forwarding (`strictorder '1'`).
+
+#### ❌ Hosting large adblock lists natively on low-RAM embedded routers
+- **Problem:** Running memory-heavy blocklists (e.g., 150k+ domains) natively on a 128MB RAM embedded router (such as Archer C6) consumes system memory, triggers kernel OOM reaper, and crashes MediaTek MT7603E wireless drivers.
+- **Fix:** Offload all heavy DNS filtering to a dedicated hypervisor LXC container (Pi-hole on `vmbr0`), using the physical router strictly as a fast caching forwarder.
+
+#### ❌ Omitting DNS anti-bypass firewall interception
+- **Problem:** Tech-savvy users, guest devices, or smart TVs can bypass network-wide parental controls simply by hardcoding static DNS (`8.8.8.8` or `1.1.1.1`) in network settings or turning on Android "Private DNS" (DoT port 853).
+- **Fix:** Configure `fw4` / nftables to transparently intercept port 53 (DNAT redirect to local router) and hard-reject port 853 for non-allowlisted devices.

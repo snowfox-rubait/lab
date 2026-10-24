@@ -51,9 +51,32 @@ ifstatus wan_fiber
 ping -c 3 1.1.1.1
 ```
 
+### 4. Pi-hole DNS Sinkhole & Router Filtering (`ssh proxmox` / `ssh router`)
+```bash
+# Check Pi-hole service inside LXC 205:
+ssh proxmox "pct exec 205 -- /usr/local/bin/pihole status"
+
+# Check router DNS forwarding and strict sequential order:
+ssh router "uci show dhcp.@dnsmasq[0].server && uci get dhcp.@dnsmasq[0].strictorder"
+
+# Check router anti-bypass firewall rules:
+ssh router "nft list chain inet fw4 dstnat_lan"
+ssh router "nft list chain inet fw4 forward_lan | grep -C 2 Block-DoT-DoQ"
+```
+
 ---
 
 ## 🩺 Diagnostic Playbooks
+
+### Issue: "A device is accessing blocked sites or ads aren't blocked"
+1. **Check if device is querying local router:**
+   - Verify device is using `192.168.1.1` as DNS (or check `/tmp/dhcp.leases` on router).
+2. **Check if Pi-hole LXC 205 is running:**
+   - Run `ssh proxmox "pct status 205"`. If stopped, router automatically falls back to Cloudflare for Families `1.1.1.3`.
+3. **Verify Pi-hole Gravity block count:**
+   - Run `ssh proxmox "pct exec 205 -- sqlite3 /etc/pihole/gravity.db 'SELECT count(*) FROM gravity;'"` (should be ~148,000+ domains).
+4. **Test domain directly from router:**
+   - `ssh router "nslookup pornhub.com 127.0.0.1"` (Must return `0.0.0.0`).
 
 ### Issue: "Internet stopped working when switching ONU cable"
 1. **Check which port has carrier:**

@@ -60,10 +60,30 @@
 
 ---
 
+## 🛡️ Future Parental Controls & Policy Restriction Roadmap
+
+The baseline infrastructure is live under [[../projects/07-pihole-dns-sinkhole/README|07-pihole-dns-sinkhole]] and [[architecture-decisions#ADR-005 Out-of-Band Pi-hole DNS Sinkhole and Strict Fallback Parental Controls|ADR-005]]. The following future restriction vectors are cataloged for upcoming implementation:
+
+1. **Time-of-Day Internet Curfew (Scheduled Lockout):**
+   - *Target:* Non-allowlisted family and repeater devices.
+   - *Mechanism:* OpenWrt `fw4` scheduled time rules dropping outbound WAN forwarding between 23:00 and 06:00, while leaving allowlisted management devices active.
+2. **Bandwidth Throttling & SQM per Device Tier:**
+   - *Target:* Non-allowlisted devices and guest repeaters.
+   - *Mechanism:* Cake / fq_codel SQM queuing to prevent video streaming on secondary devices from degrading workstation or gaming latency.
+3. **Application & Category-Specific Pi-hole Blocklists:**
+   - *Target:* Discrete Pi-hole database groups (`gravity.db`).
+   - *Mechanism:* Curated regex blocklists for social media (TikTok, Instagram, Facebook) and mobile gaming servers layered onto specific target devices.
+4. **Captive Portal Voucher Integration:**
+   - *Target:* Guest devices.
+   - *Mechanism:* Convergence with [[../projects/04-monetized-captive-portal/README|04-monetized-captive-portal]] for time-limited session tokens.
+
+---
+
 ## 📊 Evaluation & Priority Tiers
 
 | Service | Best Execution Platform | Target Network Zone | Complexity |
 | :--- | :--- | :--- | :--- |
+| **Pi-hole DNS Sinkhole** | Debian 12 LXC (LXC 205) | Home LAN / OOB (`vmbr0`) | 🟢 **Graduated to Live (`07-pihole`)** |
 | **n8n Automation Engine** | Docker / Debian LXC | Safe Internal (`vmbr1`) | Low |
 | **Mermaid Diagram Server**| Docker / Debian LXC | Safe Internal (`vmbr1`) | Low |
 | **Central DB (PostgreSQL)**| Debian LXC | Safe Internal (`vmbr1`) | Medium |
@@ -82,4 +102,3 @@
 | **Asterisk / FreePBX** | Dedicated VM / Debian LXC | Protocol DMZ (`vmbr5`) | High |
 | **Self-Hosted Mail** | Debian LXC (Postfix/Dovecot) | Protocol DMZ (`vmbr5`) | High |
 | **Router & Onboarding Bots** | Python LXC | Management Bots (`vmbr6`) | Low |
-| **Pi-hole DNS Sinkhole** | LXC or OpenWrt Native | Home LAN / OOB (`vmbr0`) | Low |

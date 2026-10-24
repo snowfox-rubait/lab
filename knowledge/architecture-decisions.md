@@ -154,7 +154,12 @@ Key architectural risks and challenges identified:
 - **Decision:** Confined Vaultwarden `/admin` strictly to local administrator workstation (`192.168.1.197/32`) and Safe Zone (`10.10.10.0/24`). Tailscale, public Cloudflare tunnel, and unprivileged containers in `10.20.20.0/24` are completely blocked with hard 404 or immediate deny responses.
 
 #### 1.5 Wi-Fi Parental Controls via MAC Allowlist
-- **Decision:** The physical router applies default content and time restrictions across the entire wireless network (affecting guest and parents' repeater devices). Authorized devices (My Phone, PC, Laptop) are placed on an explicit MAC allowlist that bypasses the restriction policy.
+- **Original Concept:** The physical router applies default content and time restrictions across the wireless network (affecting guest and parents' repeater devices), while authorized devices (Main PC, Phone, Laptop) are placed on an explicit Layer-2 MAC allowlist.
+- **Evolution & Implementation (ADR-005):** Fully designed, implemented, and verified in [[#ADR-005 Out-of-Band Pi-hole DNS Sinkhole and Strict Fallback Parental Controls|ADR-005]] and [[../projects/07-pihole-dns-sinkhole/README|Project 07: Pi-hole Out-of-Band DNS Sinkhole]].
+- **Operational Policy:**
+  - *Universal Baseline:* 100% of devices across the home (both allowlisted personal devices and family/guest devices) are bound to a strict baseline: **zero adult/NSFW content, zero adware/trackers, zero known malicious domains**.
+  - *Tier Separation:* Allowlisted devices (`mac_allowlist`) are maintained as a distinct group in the Pi-hole database (Group 1) and are exempt from firewall anti-bypass port 53 redirection.
+  - *Future Restrictions:* When custom restrictions (e.g. night-time curfews, bandwidth throttling, app blocking) are defined later, they layer directly onto the existing non-allowlisted tier without architecture changes.
 
 #### 1.6 Environment Secret Sanitization
 - **Decision:** Sanitized all literal Cloudflare Zone, Account, and Tunnel UUIDs as well as hardware MAC addresses into a gitignored root `.env` file, with a documented `.env.example` template committed to Git.
