@@ -23,8 +23,8 @@
   - **Pi-hole / AdGuard Home:** Network-wide telemetry and ad sinkhole integrated into OpenWrt DHCP.
 - **IPv6 & Dynamic DNS (CGNAT Bypass):**
   - Leveraging public routable **IPv6 prefixes** and DDNS to bypass ISP IPv4 CGNAT where port forwarding is blocked.
-- **Anonymity & Bridges:**
-  - **Tor Relay / Bridge:** Running pluggable transports (**obfs4 / obfsproxy**) to assist anti-censorship routing.
+- **Deep Packet Inspection & Intrusion Prevention (DPI/IPS):**
+  - **Suricata / Snort in Proxmox Container:** Host an enterprise-grade L7 packet inspection engine in a dedicated container or gateway VM to perform real-time TLS SNI inspection, signature-based malware blocking, and automated traffic blocking pipelines that exceed physical router CPU/RAM limits.
 - **Intrusion Prevention:**
   - **Fail2ban / CrowdSec:** Automated IP banning based on SSH authentication failures and Nginx log abuse.
 
