@@ -12,7 +12,8 @@
 | **Proxmox Host**    | Hypervisor Server              | ThinkPad Laptop (Intel i5 3rd Gen)  | `ssh proxmox` (`192.168.1.2`)      |
 | **Physical Router** | Main Home Gateway & Wi-Fi AP   | TP-Link Archer C6 v3 (OpenWrt)      | `ssh router` (`192.168.1.1`)       |
 | **Mobile Node**     | Mobile Companion / Automations | Realme P1 5G (Termux + MacroDroid)  | `ssh phone`                        |
-| **Virtual Router**  | Test lab & Container Gateway   | OpenWrt 25.12.6 VM (Proxmox VM 100) | `ssh openwrt-vm` (`192.168.1.129`) |
+| **Virtual Router**        | Test lab & Container Gateway        | OpenWrt 25.12.6 VM (Proxmox VM 100) | `ssh openwrt-vm` (`192.168.1.129`) |
+| **Pi-hole DNS Sinkhole**  | Out-of-Band Adblock & Parental Sink | Debian 12 LXC (Proxmox LXC 205)     | Web UI: `http://192.168.1.135/admin` |
 
 ---
 
@@ -81,9 +82,11 @@ The HP EliteDesk Mini PC currently runs several local services:
 | **Proxmox Legacy Lease (`eno1`)** | `MAC_PROXMOX_LEGACY` | `192.168.1.2` | Former static lease in `/etc/config/dhcp` |
 | **Proxmox USB Adapter (`eth4`)** | `MAC_PROXMOX_USB` | Dynamic / WAN | USB-Ethernet swing WAN |
 | **ThinkPad Wi-Fi (`wlp3s0`)** | `MAC_PROXMOX_WIFI` | `192.168.1.153` | Internal wireless card (standby) |
-| **Main Workstation PC** | `MAC_MAIN_PC` | `192.168.1.197` | HP EliteDesk Mini PC |
-| **OpenWrt VM (VM 100 `eth0`)** | `MAC_OPENWRT_VM` | `192.168.1.129` | Virtual Core Router LAN Interface |
-| **WAN Controller (LXC 200 `eth0`)** | `MAC_LXC_WAN_CONTROLLER` | `192.168.1.130` | Fail-safe Out-of-Band Dashboard |
+| **Main Workstation PC** | `MAC_MAIN_PC` | `192.168.1.197` | HP EliteDesk Mini PC (Allowlisted) |
+| **User Mobile Phone (`realme-P1-5G`)** | `MAC_PHONE` | `192.168.1.185` | Primary mobile device (Allowlisted) |
+| **Pi-hole Container (LXC 205 `eth0`)** | `MAC_PIHOLE_OOB` | `192.168.1.135` | Out-of-Band DNS Sinkhole (Allowlisted) |
+| **OpenWrt VM (VM 100 `eth0`)** | `MAC_OPENWRT_VM` | `192.168.1.129` | Virtual Core Router LAN Interface (Allowlisted) |
+| **WAN Controller (LXC 200 `eth0`)** | `MAC_LXC_WAN_CONTROLLER` | `192.168.1.130` | Fail-safe Out-of-Band Dashboard (Allowlisted) |
 | **ESP32 Dev Board** | `MAC_ESP32` | `10.30.30.10` / Dynamic | IoT Sensor / ESPHome Node (VLAN 30) |
 | **ESP8266 Dev Board** | `MAC_ESP8266` | `10.30.30.11` / Dynamic | IoT Sensor Node (VLAN 30) |
 
@@ -95,8 +98,11 @@ The HP EliteDesk Mini PC currently runs several local services:
 
 | Service / Node | Platform | Network Location | Status | Current Details / Source Files |
 | :--- | :--- | :--- | :--- | :--- |
-| **Physical Gateway** | TP-Link Archer C6 v3 | `192.168.1.1` (LAN) | 🟢 **Live** | Mode 1 PPPoE, `wan-mode` script (`projects/01/scripts/wan-mode`), cron auto-reboot & 07:00 WOL |
+| **Physical Gateway** | TP-Link Archer C6 v3 | `192.168.1.1` (LAN) | 🟢 **Live** | Mode 1 PPPoE, `wan-mode` script, strictorder DNS upstream, fw4 MAC allowlist & anti-bypass DNAT |
 | **Proxmox Hypervisor** | ThinkPad Laptop | `192.168.1.2` (`vmbr0`) | 🟢 **Live** | PVE 9.2.2, kernel 7.0, `power-manager.sh` (`projects/00/scripts/power-manager.sh`), `wol.service` |
+| **Virtual Router (VM 100)** | OpenWrt 25.12.6 VM | `192.168.1.129` (`vmbr0`) | 🟢 **Live** | Standby `wan_vlan` (VLAN 100), gateway for `safe_internal`, `public_ingress`, and `ha_iot` zones |
+| **WAN Controller (LXC 200)**| Debian 12 LXC | `192.168.1.130` (`vmbr0`) | 🟢 **Live** | Nginx + Python API (`projects/01/wan-controller/app.py`), Web dashboard on port 80 |
+| **Pi-hole DNS Sinkhole (LXC 205)**| Debian 12 LXC | `192.168.1.135` (`vmbr0`) | 🟢 **Live** | Pi-hole v6.5, StevenBlack adult & ad blocklists (148k domains), Group 0 (Family) & Group 1 (Allowlisted) |
 | **Virtual Router (VM 100)** | OpenWrt 25.12.6 VM | `192.168.1.129` (`vmbr0`) | 🟢 **Live** | Standby `wan_vlan` (VLAN 100), gateway for `safe_internal`, `public_ingress`, and `ha_iot` zones |
 | **WAN Controller (LXC 200)**| Debian 12 LXC | `192.168.1.130` (`vmbr0`) | 🟢 **Live** | Nginx + Python API (`projects/01/wan-controller/app.py`), Web dashboard on port 80 |
 | **Local Mini PC Services** | Docker on HP EliteDesk | `192.168.1.197` (LAN) | 🟢 **Live** | SearXNG, Ollama LLM, n8n, local Vaultwarden container |

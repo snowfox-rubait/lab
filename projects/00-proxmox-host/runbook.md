@@ -147,3 +147,43 @@ To guarantee the laptop wakes up at 7:00 AM regardless of motherboard S5 power s
 > - **Required Device Setting for Allowlist Exemption:**
 >   - Android: `Settings` $\rightarrow$ `Wi-Fi` $\rightarrow$ `[Home Network]` $\rightarrow$ `Privacy` $\rightarrow$ Select **"Use device MAC"**.
 >   - iOS: `Settings` $\rightarrow$ `Wi-Fi` $\rightarrow$ `(i)` next to network $\rightarrow$ Toggle **"Private Wi-Fi Address"** to **Off**.
+
+---
+
+## 🛡️ Out-of-Band Pi-hole DNS Sinkhole (LXC 205: `pihole-oob`)
+
+To provide network-wide parental controls, adult website blocking, and ad filtering without overloading the physical router's limited RAM/flash, a dedicated Pi-hole instance runs directly on the Out-of-Band management bridge (`vmbr0`).
+
+### Container Specifications:
+- **Container ID:** `205` (`pihole-oob`)
+- **Base OS:** Debian 12 (Bookworm)
+- **Network Interface:** `eth0` bridged to `vmbr0`
+- **Static IP:** `192.168.1.135/24` (Gateway: `192.168.1.1`)
+- **Hardware MAC:** Mapped via `MAC_PIHOLE_OOB` in `.env`
+- **Resources:** 1 vCPU, 512MB RAM, 4GB Storage (`nesting=1`, `onboot=1`)
+- **Web Admin Interface:** `http://192.168.1.135/admin`
+- **Software Stack:** Pi-hole Core v6.5, Web v6.6.1, FTL v6.8
+
+### Blocklists & Group Segmentation:
+- **Gravity Database:** `/etc/pihole/gravity.db`
+- **Adlists Configured:**
+  - **Adlist 1:** StevenBlack Standard (`https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts`) — Adware, malware, and telemetry tracking.
+  - **Adlist 2:** StevenBlack Unified Adult & NSFW (`https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/porn/hosts`) — Adult, pornographic, and explicit domains (**148,038 unique domains**).
+- **Group Mappings:**
+  - **Group 0 (`Default`):** Contains Adlist 1 + Adlist 2. All traffic forwarded from the physical router (`192.168.1.1`) enters this group and is subject to full ad and adult filtering.
+  - **Group 1 (`Whitelisted-AdBlockOnly`):** Contains Adlist 1 only (Adware blocked, adult content permitted). Allowlisted personal devices (`192.168.1.197`, `192.168.1.185`, `192.168.1.153`) querying Pi-hole directly enter this group.
+
+### Useful Maintenance Commands:
+```bash
+# Check Pi-hole service status inside LXC 205:
+ssh proxmox "pct exec 205 -- /usr/local/bin/pihole status"
+
+# Reload gravity blocklists without restarting DNS:
+ssh proxmox "pct exec 205 -- /usr/local/bin/pihole reloaddns"
+
+# Update gravity blocklists from upstreams:
+ssh proxmox "pct exec 205 -- /usr/local/bin/pihole updateGravity"
+
+# Inspect group and client assignments in gravity database:
+ssh proxmox "pct exec 205 -- sqlite3 /etc/pihole/gravity.db 'SELECT c.ip, c.comment, g.name FROM client c JOIN client_by_group cbg ON c.id=cbg.client_id JOIN \"group\" g ON cbg.group_id=g.id;'"
+```

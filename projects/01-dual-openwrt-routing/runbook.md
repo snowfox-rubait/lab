@@ -63,3 +63,95 @@ A dedicated container sits on the Home bridge (`vmbr0`) running Nginx and an int
   - Interactive Mode 1, Mode 2, and Mode 3 switching buttons with confirmation dialogues.
   - Shows raw kernel default routing table and PPPoE peer IP addresses.
   - Nginx terminates port 80 and reverse proxies into the internal control API.
+
+---
+
+## 🛡️ Wi-Fi Restrictions, Parental Controls & Anti-Bypass Firewall
+
+> **Architectural Decision Reference:** [[../../knowledge/architecture-decisions#ADR-005 Out-of-Band Pi-hole DNS Sinkhole and Strict Fallback Parental Controls|ADR-005]] and [[../../knowledge/architecture-decisions#15-wi-fi-parental-controls-via-mac-allowlist|ADR-002 §1.5]]
+
+To enforce adult content blocking, ad filtering, and malware protection across the entire physical Wi-Fi network (including parents' repeaters and guest clients) without overloading the router's 16MB flash/128MB RAM:
+
+### 1. Strict Upstream DNS Hierarchy (`dnsmasq`)
+DHCP clients on the Home LAN receive **only** `192.168.1.1` as their DNS resolver. The router's `/etc/config/dhcp` forwards queries sequentially using `strictorder`:
+```uci
+set dhcp.@dnsmasq[0].strictorder='1'
+set dhcp.@dnsmasq[0].noresolv='1'
+del dhcp.@dnsmasq[0].server
+add_list dhcp.@dnsmasq[0].server='192.168.1.135'  # 1. Pi-hole LXC 205 (OOB Container)
+add_list dhcp.@dnsmasq[0].server='1.1.1.3'        # 2. Cloudflare for Families (Nightly Fallback: Malware + Adult Block)
+add_list dhcp.@dnsmasq[0].server='9.9.9.9'        # 3. Quad9 (Malware Block)
+add_list dhcp.@dnsmasq[0].server='8.8.8.8'        # 4. Google Public DNS (Emergency Last Resort)
+```
+
+**Nightly Failover Behavior:**
+When Proxmox powers down at midnight (00:00 to 07:00), Pi-hole (`192.168.1.135`) goes offline. Because `strictorder` is enabled, dnsmasq seamlessly fails over to `1.1.1.3` (Cloudflare for Families). This guarantees that adult and malware blocking remains 100% active for family devices even while the server sleeps.
+
+### 2. MAC Allowlist Configuration (`fw4` ipset)
+The router maintains an nftables Layer-2 set of authorized management and personal devices in `/etc/config/firewall`:
+```uci
+config ipset 'mac_allowlist'
+	option name 'mac_allowlist'
+	option match 'src_mac'
+	list entry '94:b8:6d:59:b8:6b'  # Main Workstation PC
+	list entry 'e2:ff:e0:37:df:5e'  # User Realme P1 5G Phone
+	list entry '60:36:dd:50:c6:8e'  # ThinkPad Wi-Fi NIC
+	list entry 'b8:88:e3:e7:5e:1f'  # Proxmox Built-in Ethernet
+	list entry '10:62:e5:00:9f:8f'  # Proxmox Legacy NIC
+	list entry 'bc:24:11:1c:d6:80'  # Pi-hole LXC 205 (Required to prevent upstream query loop)
+	list entry 'bc:24:11:eb:6f:6e'  # WAN Controller LXC 200
+	list entry 'bc:24:11:d4:16:9f'  # OpenWrt VM 100
+```
+
+### 3. Anti-Bypass Firewall Rules
+Configured in `/etc/config/firewall` using OpenWrt 25.12 (`fw4` / nftables):
+
+1. **DNS Interception (DNAT Port 53):**
+   Catches any device attempting to bypass Pi-hole by hardcoding custom DNS (e.g., `8.8.8.8` or `1.1.1.1`):
+   ```uci
+   config redirect 'dns_intercept_udp'
+   	option name 'Intercept-DNS-UDP'
+   	option src 'lan'
+   	option proto 'udp'
+   	option src_dport '53'
+   	option dest_port '53'
+   	option target 'DNAT'
+   	option ipset '!mac_allowlist'
+
+   config redirect 'dns_intercept_tcp'
+   	option name 'Intercept-DNS-TCP'
+   	option src 'lan'
+   	option proto 'tcp'
+   	option src_dport '53'
+   	option dest_port '53'
+   	option target 'DNAT'
+   	option ipset '!mac_allowlist'
+   ```
+2. **Encrypted DNS Dropping (DoT / DoQ Port 853):**
+   Rejects DNS-over-TLS (Android "Private DNS") and DNS-over-QUIC for non-allowlisted devices, forcing client devices to fall back to port 53 where they are intercepted:
+   ```uci
+   config rule 'block_dot'
+   	option name 'Block-DoT-DoQ'
+   	option src 'lan'
+   	option dest 'wan'
+   	option proto 'tcp udp'
+   	option dest_port '853'
+   	option target 'REJECT'
+   	option ipset '!mac_allowlist'
+   ```
+
+### 4. Operational Verification Commands
+```bash
+# Verify active nftables interception chain:
+ssh router "nft list chain inet fw4 dstnat_lan"
+
+# Verify active nftables DoT reject rules:
+ssh router "nft list chain inet fw4 forward_lan | grep -C 2 Block-DoT-DoQ"
+
+# Verify upstream DNS servers and strict order:
+ssh router "uci show dhcp.@dnsmasq[0].server && uci get dhcp.@dnsmasq[0].strictorder"
+
+# Test DNS filtering from the router itself:
+ssh router "nslookup pornhub.com 127.0.0.1"   # Must return 0.0.0.0 (Sinkholed by Pi-hole)
+ssh router "nslookup google.com 127.0.0.1"    # Must resolve successfully
+```

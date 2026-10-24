@@ -9,6 +9,7 @@
 - [[#ADR-002 Fail-Safe Mode 1 Shutdown, Storage Bind Mounts, and Management Bots Zone]] *(2026-10-23)*
 - [[#ADR-003 Isolated Low-Power IoT Wireless Tier, MAC Allowlisting, and MQTT Telemetry Routing]] *(2026-10-23)*
 - [[#ADR-004 Live Node Zone Realignment, WAN Metric Priority, and Zero-Drift Standardization]] *(2026-10-23)*
+- [[#ADR-005 Out-of-Band Pi-hole DNS Sinkhole and Strict Fallback Parental Controls]] *(2026-10-24)*
 
 ---
 
@@ -219,3 +220,69 @@ To avoid configuration drift between documentation and Proxmox `/etc/network/int
 ### 4. Consequences & Impact
 - **Clarity:** Next implementation phases (deploying LXC containers and Proxmox bridges) now have unambiguous bridge mappings and security models.
 - **Security:** Inbound exposure is strictly constrained to services that genuinely require it (`ZonePublicSafe` via Cloudflare Tunnel, and `ZoneDMZ` via firewall-bounced raw ports). Trusted backup data stays strictly on internal bridges.
+
+---
+
+## ADR-005: Out-of-Band Pi-hole DNS Sinkhole and Strict Fallback Parental Controls
+
+- **Date:** 2026-10-24
+- **Status:** Approved & Implemented
+- **Scope:** Out-of-Band Pi-hole deployment (LXC 205), Archer C6 strict-order upstream DNS failover, OpenWrt fw4 (nftables) MAC allowlisting, port 53 anti-bypass redirection, port 853 DoT rejection, and multi-tier group filtering.
+
+---
+
+### 1. Context & Problem Statement
+Enforcing parental controls, adult website blocking, and ad/malware filtering across the physical home Wi-Fi network presented several key constraints:
+1. **Physical Router Hardware Limitations:** The TP-Link Archer C6 v3 gateway has only 16MB flash and 128MB RAM. Running on-router DNS blocklists (e.g., `adblock-fast` or `simple-adblock`) rapidly exhausts system RAM, causing memory pressure and triggering MediaTek MT7603E wireless driver kernel lockups.
+2. **Nightly Proxmox Power-Down Window:** Per [[#ADR-002 Fail-Safe Mode 1 Shutdown, Storage Bind Mounts, and Management Bots Zone|ADR-002]], the Proxmox hypervisor automatically shuts down between 00:00 (midnight) and 07:00 AM to conserve power and battery health. If DNS is solely hosted inside a hypervisor container, all home internet resolution dies when the server powers off.
+3. **Client OS DNS Fallback Quirks:** Modern client operating systems (Android, iOS, Windows) do not treat multiple DHCP-advertised DNS servers as strict primary/secondary. Instead, they query both in parallel or round-robin, leaking unblocked queries if any unfiltered secondary DNS is advertised directly via DHCP.
+4. **Bypass Vectors on Client Devices:** Non-allowlisted devices (such as guest phones or repeater clients) can easily bypass DNS-based parental controls by manually configuring static DNS (e.g., `8.8.8.8` or `1.1.1.1`) in their Wi-Fi adapter settings, or by enabling Android "Private DNS" (DNS-over-TLS on port 853).
+
+---
+
+### 2. Architectural Decisions & Implementation
+
+#### 2.1 Out-of-Band Pi-hole Deployment (LXC 205 on `vmbr0`)
+- **Container Architecture:** Provisioned Debian 12 LXC container 205 (`pihole-oob`) attached directly to the Out-of-Band Home LAN bridge (`vmbr0`) with static IP `192.168.1.135/24` (gateway `192.168.1.1`).
+- **Resource Footprint:** 1 vCPU, 512MB RAM, 4GB disk, `nesting=1`, `onboot=1` (MAC `bc:24:11:1c:d6:80`).
+- **Filter Lists Applied:** Loaded StevenBlack Standard hosts (ad/malware tracking) alongside StevenBlack Unified Adult & NSFW blocklist (`https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/porn/hosts`), totaling **148,038 unique blocked domains**.
+
+#### 2.2 Router-Centric Strict-Order DNS Hierarchy
+To solve the midnight hypervisor power-down dilemma while guaranteeing strict sequential query routing:
+- Clients on the Home LAN receive **only** the physical router's IP (`192.168.1.1`) via DHCP.
+- The physical router's `dnsmasq` instance is configured with `strictorder '1'` and `noresolv '1'`, forwarding queries through an explicit hierarchy:
+  1. `192.168.1.135` — **Primary:** Out-of-Band Pi-hole LXC 205 (Fast local sinkhole, adblocking, adult blocking).
+  2. `1.1.1.3` — **Secondary (Nightly Fallback):** Cloudflare for Families (Provides automated malware and adult content blocking during Proxmox 00:00–07:00 sleep).
+  3. `9.9.9.9` — **Third:** Quad9 (Malware and phishing protection).
+  4. `8.8.8.8` — **Emergency Last Resort:** Google Public DNS.
+- With `strictorder '1'`, `dnsmasq` sends 100% of queries to Pi-hole when online. If Pi-hole becomes unreachable, it automatically queries the next upstream server in order without leaking unfiltered requests.
+
+#### 2.3 OpenWrt `fw4` (nftables) MAC Allowlist & Anti-Bypass Rules
+Configured on the physical Archer C6 router (`/etc/config/firewall`):
+1. **MAC Allowlist (`set mac_allowlist`):**
+   - Main Workstation PC (`94:b8:6d:59:b8:6b`)
+   - User Realme Phone (`e2:ff:e0:37:df:5e`)
+   - Proxmox Laptop Wi-Fi (`60:36:dd:50:c6:8e`)
+   - Proxmox Host Built-in & Legacy NICs (`b8:88:e3:e7:5e:1f`, `10:62:e5:00:9f:8f`)
+   - Infrastructure Containers: Pi-hole (`bc:24:11:1c:d6:80`), WAN Controller (`bc:24:11:eb:6f:6e`), OpenWrt VM (`bc:24:11:d4:16:9f`).
+2. **Transparent DNS Interception (DNAT Port 53):**
+   - Any UDP or TCP port 53 packets originating from `!mac_allowlist` are intercepted and redirected directly to the local router (`192.168.1.1:53`).
+   - Prevents non-allowlisted devices from manually overriding DNS in their network settings.
+3. **DoT / DoQ Hard Drop (Port 853):**
+   - Outbound TCP and UDP port 853 traffic originating from `!mac_allowlist` is rejected with `REJECT`.
+   - Forces Android "Private DNS" and iOS encrypted DNS clients to fall back to standard DNS (port 53), which is then intercepted and filtered.
+
+#### 2.4 Multi-Tier Pi-hole Group Filtering
+Utilized Pi-hole v6 FTL group management in `/etc/pihole/gravity.db`:
+- **Group 0 (Default):** Assigned Adlist 1 (Ads) and Adlist 2 (Adult/NSFW). Queries forwarded by Archer C6 (`192.168.1.1`) enter Group 0 and receive full parental filtering.
+- **Group 1 (`Whitelisted-AdBlockOnly`):** Assigned Adlist 1 only (Ads/malware blocked; adult content unrestricted). Whitelisted client IPs (`192.168.1.197`, `192.168.1.185`, `192.168.1.153`) querying Pi-hole directly are mapped to Group 1.
+- Allowlisted MACs also retain full network permission to query external resolvers (`1.1.1.1`, `8.8.8.8`) directly if complete bypass is desired.
+
+---
+
+### 3. Verification & Test Results
+- **Direct Ad Sinkhole Test:** Querying `pagead2.googlesyndication.com` returns `0.0.0.0` (Blocked).
+- **Adult Filtering for Restricted Devices:** Querying `pornhub.com` via router `192.168.1.1` returns `0.0.0.0` (Blocked).
+- **Allowlisted Exemption:** Querying `pornhub.com` from PC `192.168.1.197` directly to Pi-hole resolves to valid upstream IP (`66.254.114.41`).
+- **Firewall Ruleset:** `fw4 check` and `nft list chain inet fw4 dstnat_lan` confirmed active anti-bypass rules in kernel.
+
