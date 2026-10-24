@@ -260,3 +260,9 @@ flowchart TD
 - **Runbook:** [[lab/projects/11-multiwan-load-balancing/runbook|Multi-WAN Load Balancing Operations & Verification Runbook]]
 - **Status:** Staged & Documented (Awaiting Off-Peak Testing Window)
 - **Covers:** Simultaneous dual-PPPoE traffic splitting (Mode 3), sticky HTTPS persistence (port 443), P2P/torrent VM offload, sub-5-second ICMP health tracking, and zero-downtime safety rollback.
+
+### 12. Centralized Multi-Tenant Database Service (`db-central`)
+- **Directory:** `projects/12-central-database-service/`
+- **Documentation:** [[lab/projects/12-central-database-service/README|Central Database Service Architecture]]
+- **Current Live Status:** Provisioned on Proxmox (LXC 210 on `vmbr7` at `10.70.70.10`)
+- **Covers:** Debian 13 host parity, dedicated database tier (`vmbr7`), role-and-database level multi-tenancy, Vaultwarden/Gitea/n8n pinhole routing, zero-WAN-egress isolation, and companion cloud backup landing zone for Neon & Supabase.
