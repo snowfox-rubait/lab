@@ -22,4 +22,4 @@
   - [[002-vlan-trunking|EXP-002: Single-Cable VLAN Trunking & Multi-Mode Dual PPPoE]]
   - [[003-iot-vlan30-trunking|EXP-003: Single-Cable Multi-VLAN Trunking for Isolated IoT Wi-Fi (VLAN 30)]]
 - 🔒 **Environment Configurations:**
-  - Configuration template: `.env.example` (PPPoE credentials, static gateway mappings)
+  - Central environment template: [[../../.env.example|Root .env.example]] (PPPoE credentials, DNS servers, static gateway mappings)
