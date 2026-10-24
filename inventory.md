@@ -14,6 +14,8 @@
 | **Mobile Node**     | Mobile Companion / Automations | Realme P1 5G (Termux + MacroDroid)  | `ssh phone`                        |
 | **Virtual Router**        | Test lab & Container Gateway        | OpenWrt 25.12.6 VM (Proxmox VM 100) | `ssh openwrt-vm` (`192.168.1.129`) |
 | **Pi-hole DNS Sinkhole**  | Out-of-Band Adblock & Parental Sink | Debian 12 LXC (Proxmox LXC 205)     | Web UI: `http://192.168.1.135/admin` (`projects/07-pihole-dns-sinkhole`) |
+| **n8n Automation Engine** | Low-Code Event & Breach Watchdog   | Proxmox LXC (Planned - `vmbr1`)     | Web UI: `http://10.10.10.25:5678` (`projects/08-n8n-workflow-automation`) |
+| **Telegram Bot Hub**      | Central Alerting & Dispatcher       | Node/Python daemon (Planned)        | Bot API (`projects/09-telegram-bot-hub`) |
 
 ---
 

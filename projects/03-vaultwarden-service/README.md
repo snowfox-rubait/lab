@@ -159,6 +159,34 @@ sequenceDiagram
 
 ---
 
+## 🚀 Advanced Capabilities & Integration Potential
+
+Beyond basic password storage, Vaultwarden unlocks the full suite of enterprise-grade Bitwarden features without licensing fees:
+
+### 1. Built-in Security & Auditing Tools
+- **Password Health & Breach Reports (`bw report password-health`):** Audits vault credentials against Have I Been Pwned (HIBP) using zero-knowledge $k$-anonymity SHA-1 hash prefixes. Integrated with **Project 08 (n8n)** and **Project 09 (Telegram Bot Hub)** for 10-minute automated monitoring and Telegram alerting.
+- **Exposed Passwords & Reused Credentials Report:** Identifies duplicate credentials across different accounts to prevent credential-stuffing vulnerabilities.
+- **Weak Passwords & Unencrypted Websites Report:** Flags items missing TLS encryption (`http://`) or failing length/complexity policies.
+- **Inactive 2FA Report:** Identifies online accounts that support two-factor authentication where TOTP has not yet been configured in the vault.
+
+### 2. Digital Legacy & Emergency Access
+- **Emergency Access (Digital Will):** Allows designating trusted contacts ("grantees") who can request access to your vault if you become incapacitated or lose master credentials.
+- **Configurable Takeover Wait Period:** Grantees can be granted *View-only* or *Takeover* access, gated by a customizable cooling-off wait delay (e.g. 7 days), giving you time to deny unauthorized requests.
+
+### 3. Encrypted Ephemeral Sharing (Bitwarden Send)
+- **Zero-Knowledge File & Secret Transfers:** Securely send temporary credentials, API keys, or files (up to configured attachment limits) to third parties or friends via encrypted expiring links.
+- **Granular Access Constraints:** Configurable expiration timestamps (e.g., 1 hour, 1 day), maximum download counts (burn-after-read), and optional passcodes.
+
+### 4. Organizations, Collections & Granular Access Controls
+- **Family & Team Vaults:** Share specific password items across multiple users using fine-grained Collections without exposing entire vaults.
+- **Hide Passwords Permission:** Allows team members or family to auto-fill credentials into browser forms without viewing the plaintext password.
+
+### 5. Native Two-Factor Authentication & Passkey (FIDO2) Storage
+- **Built-in TOTP Authenticator:** Generates time-based 6-digit verification codes natively in the browser extension and mobile apps.
+- **Passkey / WebAuthn Storage:** Stores public/private keypairs for passkey-enabled websites directly within vault records.
+
+---
+
 ## 💾 Backup Strategy
-- **Live Database:** SQLite / PostgreSQL mounted on persistent local-lvm storage.
+- **Live Database:** Centralized PostgreSQL instance on Dedicated Database Tier (`vmbr7`, `10.70.70.2`).
 - **Cold Backup Sync:** Encrypted nightly dumps mirrored to offsite cloud (Cloudflare R2 / S3 / Supabase storage bucket) to guarantee zero data loss.

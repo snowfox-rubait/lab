@@ -234,3 +234,15 @@ flowchart TD
 - **Runbook:** [[lab/projects/07-pihole-dns-sinkhole/runbook|Pi-hole Operations & Maintenance Runbook]]
 - **Current Live Status:** Live & Verified (Proxmox LXC 205 at `192.168.1.135` on `vmbr0`)
 - **Covers:** Hardware offload from Archer C6, StevenBlack unified adult & ad blocklists (148k domains), universal network-wide baseline, strict sequential upstream failover (`1.1.1.3` Cloudflare for Families during Proxmox midnight-7 AM sleep), and anti-bypass firewall DNAT/port 853 drops.
+
+### 8. n8n Low-Code Workflow Automation Engine
+- **Directory:** `projects/08-n8n-workflow-automation/`
+- **Documentation:** [[lab/projects/08-n8n-workflow-automation/README|n8n Workflow Automation Hub Architecture]]
+- **Status:** Planned / Architecture & Security Blueprint
+- **Covers:** Low-code event pipeline engine, 10-minute Have I Been Pwned (HIBP) vault credential breach detection watchdog, automated high-entropy password regeneration with historical retention, and cross-service webhook orchestration.
+
+### 9. Centralized Telegram Bot & Alerting Hub
+- **Directory:** `projects/09-telegram-bot-hub/`
+- **Documentation:** [[lab/projects/09-telegram-bot-hub/README|Centralized Telegram Bot & Alerting Hub]]
+- **Status:** Planned / Architecture & Security Blueprint
+- **Covers:** Central incident dispatching layer, interactive inline remediation buttons, direct password reset URL resolution (`/.well-known/change-password`), Proxmox SMART/backup alerts, and multi-service incident escalation.
