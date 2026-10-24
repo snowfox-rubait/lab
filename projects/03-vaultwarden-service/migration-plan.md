@@ -24,7 +24,7 @@ OpenWrt VM (VM 100: 192.168.1.129)
 LXC 202: nginx-public (10.20.20.10)
    ├── cloudflared daemon (Ingress terminates here)
    └── Nginx reverse proxy (Applies /admin IP restrictions)
-         │ (HTTP :8085)
+         │ (HTTPS :8443 - E2EE via Homelab Root CA)
          ▼
 LXC 220: vaultwarden (10.20.20.11)
    │ (OpenWrt Firewall Pinhole: TCP 5432)
@@ -40,7 +40,7 @@ LXC 210: db-central (10.70.70.10 on vmbr7)
 ### 1. Per-Zone Ingress Setup (`nginx-public` on LXC 202)
 - ✅ Provisioned Debian 13 LXC 202 on `vmbr2` (`10.20.20.10/24`).
 - ✅ Installed Nginx and Cloudflared.
-- ✅ Deployed reverse proxy config terminating port 80/443 and proxying `/` and `/notifications/hub` to `10.20.20.11:8085`.
+- ✅ Deployed reverse proxy config terminating port 80/443 and proxying `/` to `https://10.20.20.11:8443` (E2EE) and `/notifications/hub` to `10.20.20.11:3012`.
 - ✅ Enforced `/admin` lockdown to local administrator IP (`192.168.1.197`).
 
 ### 2. Database Schema & Data Migration (`db.sqlite3` ➔ `vaultwarden_db`)

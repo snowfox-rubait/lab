@@ -44,7 +44,7 @@
 ### 3. HOW Was It Done? (Technical Implementation Details)
 
 #### Phase 1: Hypervisor & Core Routing Wiring
-1. Hotplugged `vmbr7` onto OpenWrt VM (VM 100) as `net5` (`eth6`).
+1. Hotplugged `vmbr7` onto OpenWrt VM (VM 100) as `net5` (persistent device `eth5`).
 2. Configured OpenWrt gateway `10.70.70.1/24` with default firewall `REJECT` and zero outbound WAN egress.
 3. Added audited pinhole rule on OpenWrt VM:
    ```uci

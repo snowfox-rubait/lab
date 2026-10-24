@@ -73,3 +73,15 @@
 #### ❌ Scheduling bare `/sbin/reboot` in OpenWrt cron without uptime guards
 - **Problem:** Embedded consumer routers lack real-time clock (RTC) batteries. During boot, OpenWrt restores time from the newest file in `/etc` via `sysfixtime`. If a cron reboot triggers at `16:00:00`, the router reboots in ~30 seconds; if the clock has not stepped past `16:00:59` (or is temporarily restored to an earlier timestamp before NTP syncs), `crond` evaluates the matching rule again and reboots immediately. This triggers an infinite reboot loop that lasts tens of minutes.
 - **Fix:** Never invoke bare `/sbin/reboot` in cron. Always gate automated reboots through a wrapper script (e.g., `/usr/bin/safe-reboot`) that verifies `cut -d. -f1 /proc/uptime` is $\ge$ 600s (10 minutes) and sleeps 60 seconds across the scheduled minute boundary before issuing reboot.
+
+---
+
+### 7. Database Migration & Inter-Container Networking
+
+#### ❌ Importing SQLite data into PostgreSQL with integer booleans or unmigrated schemas
+- **Problem:** SQLite stores booleans as integer `0`/`1`, while PostgreSQL strictly enforces boolean types (`true`/`false`). Furthermore, pre-creating tables via external tools like `pgloader` bypasses Diesel migration registry (`__diesel_schema_migrations`), leading to startup panics.
+- **Fix:** Allow the application to execute native migrations against an empty database first, then insert data rows using dynamic Python schema type-casting under `session_replication_role = 'replica'`.
+
+#### ❌ Neglecting routed/masqueraded gateway IP in `pg_hba.conf`
+- **Problem:** When containers communicate across OpenWrt VM bridges (e.g., `vmbr2` $\rightarrow$ `vmbr7`), the OpenWrt router firewall masquerades the traffic with source IP `10.70.70.1`. If PostgreSQL's `pg_hba.conf` is locked down to only accept the originating container IP `10.20.20.11/32`, connections are rejected with `FATAL: no pg_hba.conf entry for host "10.70.70.1"`.
+- **Fix:** Always authorize the routed gateway subnet in `pg_hba.conf` (`10.70.70.0/24`).

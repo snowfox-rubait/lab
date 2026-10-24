@@ -15,7 +15,7 @@
 - **Benefits:**
   - Identical libc, systemd, and kernel ABI expectations between host and container namespaces.
   - Zero translation overhead for shared kernel cgroups v2.
-  - Up-to-date PostgreSQL 16/17 and modern package repos without backports.
+  - Up-to-date PostgreSQL 17 and modern package repos without backports.
 
 ---
 
@@ -51,7 +51,7 @@ Here is the exact capacity breakdown for your intended homelab suite:
 | **Pi-hole OOB (LXC 205)** | LXC | 1 vCPU | 512 MiB | ~95 MiB | `vmbr0` |
 | **Central Database (LXC 210)**| LXC | 2 vCPU | 2048 MiB | ~400 MiB - 1 GiB | `vmbr7` |
 | **Vaultwarden (LXC 220)** | LXC | 1 vCPU | 512 MiB | ~80 MiB | `vmbr2` |
-| **Headscale (LXC 230)** | LXC | 1 vCPU | 512 MiB | ~60 MiB | `vmbr2` |
+| **Headscale (Deferred)** | LXC | 1 vCPU | 512 MiB | ~60 MiB | Undecided / Separated |
 | **n8n Automation (LXC 240)** | LXC | 1 vCPU | 1024 MiB | ~350 MiB | `vmbr1` |
 | **Telegram Hub (LXC 250)** | LXC | 1 vCPU | 512 MiB | ~70 MiB | `vmbr0` / `vmbr1` |
 | **Gitea + Actions (LXC 260)** | LXC | 1 vCPU | 1024 MiB | ~250 MiB | `vmbr1` |

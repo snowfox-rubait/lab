@@ -203,10 +203,10 @@ Specifically, several architectural misalignments were identified:
 #### 2.2 Standardizing Proxmox Bridge Numbering
 To avoid configuration drift between documentation and Proxmox `/etc/network/interfaces`, all security tiers were assigned deterministic bridge IDs:
 - **`vmbr0` (`192.168.1.0/24`):** Physical Home LAN & Out-of-Band Management (PVE Host, physical router, LXC 200 WAN controller, OOB Pi-hole).
-- **`vmbr1` (`10.10.10.0/24`):** Safe Internal Zone (Private LAN, Central DB, Gitea, Immich, NAS, BookStack, n8n, Kiwix, Jellyfin, gray Cloudflare DNS via Tailscale).
+- **`vmbr1` (`10.10.10.0/24`):** Safe Internal Zone (Private LAN, Gitea, Immich, NAS, BookStack, n8n, Kiwix, Jellyfin, gray Cloudflare DNS via Tailscale).
 - **`vmbr2` (`10.20.20.0/24`):** Safe Public Ingress Zone (Cloudflare Tunnel ingress for Vaultwarden; Headscale decoupled and deferred).
 - **`vmbr3` (`10.30.30.0/24`):** Dedicated IoT & Home Assistant Zone (Home Assistant core & integrations, isolated from general compute).
-- **`vmbr4` (`10.40.40.0/24`):** Unsafe / Ingress Online Services (Tor obfs4 node, *Arr stack, qBittorrent, public MQTT, Telegram bots).
+- **`vmbr4` (`10.40.40.0/24`):** Unsafe Online Services (*Arr stack, qBittorrent, local quarantine lab).
 - **`vmbr5` (`10.50.50.0/24`):** Direct Protocol Ingress DMZ (Asterisk/FreePBX VoIP, self-hosted Mail).
 
 #### 2.3 Single Source of Truth
@@ -314,7 +314,7 @@ However, this topology introduced two security limitations:
 - **Proxmox Bridge:** Provisioned `vmbr7` on Proxmox host `/etc/network/interfaces` with zero physical ports (`bridge-ports none`).
 - **Core Router Interface:** Assigned subnet `10.70.70.0/24` with OpenWrt VM acting as default gateway on `10.70.70.1`.
 - **Workloads Hosted in `vmbr7`:**
-  - **`Database` (`10.70.70.10`):** Central multi-tenant PostgreSQL 16 & Redis container serving Gitea, Immich, Vaultwarden, n8n, and BookStack.
+  - **`Database` (`10.70.70.10`):** Central multi-tenant PostgreSQL 17 & Redis 7 container serving Gitea, Immich, Vaultwarden, n8n, and BookStack.
   - **`DBBackup` (`10.70.70.11`):** Cold-backup sync container running scheduled automated `pg_dump` of local tenant databases and encrypted pull jobs from cloud providers (**Supabase** and **Neon**).
 
 #### 2.2 Strict Zero-Trust Inter-Bridge Firewall Policies
@@ -332,7 +332,7 @@ Configured on OpenWrt VM (`openwrt-vm`):
    - Destination: `10.70.70.10` on ports `TCP:5432` (Postgres) and `TCP:6379` (Redis).
    - Action: `ACCEPT`.
 4. **Hard Quarantine from Untrusted Zones:**
-   - From `vmbr4` (Tor / P2P), `vmbr5` (DMZ VoIP/Mail), `vmbr6` (Bots), and `vmbr0` (Home LAN / Guest): **HARD REJECT / DROP**. Zero database reachability.
+   - From `vmbr4` (*Arr / P2P), `vmbr5` (DMZ VoIP/Mail), `vmbr6` (Bots), and `vmbr0` (Home LAN / Guest): **HARD REJECT / DROP**. Zero database reachability.
 5. **Egress Internet Access:**
    - `Database` engine (`10.70.70.10`): **ZERO direct internet access**.
    - `DBBackup` container (`10.70.70.11`): Pinhole permitted outbound to WAN strictly for HTTPS/TLS database replication to Supabase and Neon endpoints.

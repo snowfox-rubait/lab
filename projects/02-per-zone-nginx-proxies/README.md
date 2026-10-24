@@ -108,7 +108,6 @@ All homelab services live behind the OpenWrt VM, partitioned by protocol, access
 - **Reverse Proxy:** **None** (Outbound only).
 - **Access Model:** Services in this zone initiate outbound connections to the internet or connect through external VPNs/proxies.
 - **Hosted Services:**
-  - `Tor Node`: Anti-censorship relay / bridge (`obfs4`)
   - `*Arr Stack & qBittorrent`: Media indexers and P2P downloaders (bound to VPN).
   - **Storage Architecture & Privilege Separation:**
     - Download cache: `/mnt/storage/downloads` $\rightarrow$ Mounted Read/Write into `qBittorrent` and `*Arr`.

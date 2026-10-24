@@ -21,8 +21,9 @@ Due to known MediaTek MT7603E PCIe driver lockups after prolonged uptime, an aut
 
 ## ⏰ 7:00 AM Proxmox Laptop Auto-Wakeup
 Because the ThinkPad cuts off mechanical power to internal RTC wake pins in ACPI state S5 (Poweroff), the physical router acts as the primary Wake-on-LAN wake engine:
-- **Router Cron Entry:** `0 7 * * * /usr/bin/etherwake -i br-lan <MAC_PROXMOX_BUILTIN>`
+- **Router Cron Entry:** `0 7 * * * /usr/bin/etherwake -i br-lan b8:88:e3:e7:5e:1f`
 - Transmits an etherwake Magic Packet across `br-lan` at 7:00 AM every morning to boot the Proxmox server automatically.
+- **Manual Trigger Command:** `/usr/bin/wake-proxmox` (or workstation `wake-proxmox`).
 
 ---
 

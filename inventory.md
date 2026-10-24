@@ -163,12 +163,12 @@ The OpenWrt VM (VM 100) interfaces are unified with the master architecture zone
 | UCI Interface Name | Linux Device | Proxmox Bridge | Gateway Subnet | Architectural Role | Current Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `network.homelan` | `eth0` | `vmbr0` | `192.168.1.129/24` | Out-of-Band Management & Physical LAN link | 🟢 Live |
-| `network.safe_internal` | `eth1` | `vmbr1` | `10.10.10.1/24` | Safe Internal Zone (DB, NAS, Gitea) | 🟢 Live |
+| `network.safe_internal` | `eth1` | `vmbr1` | `10.10.10.1/24` | Safe Internal Zone (Gitea, Immich, n8n, NAS) | 🟢 Live |
 | `network.public_ingress`| `eth2` | `vmbr2` | `10.20.20.1/24` | Safe Public Ingress (Tunnel, Vaultwarden) | 🟢 Live |
 | `network.ha_iot` | `eth3` | `vmbr3` | `10.30.30.1/24` | Home Assistant & IoT Zone (VLAN 30 Trunk) | 🟢 Live |
-| `network.wan_fiber` | `eth4` | USB Passthrough | Dynamic PPPoE | Direct Fiber WAN (Emergency swing link) | 🟢 Live (Metric 15) |
-| `network.wan_vlan` | `eth5` | `vmbr100` | Dynamic PPPoE | VLAN 100 Tagged PPPoE Dialer (Mode 2 / Mode 3) | 🟢 Live (Metric 10) |
-| `network.unsafe` | *Pending* | `vmbr4` | `10.40.40.1/24` | Unsafe Online (Tor, *Arr, qBittorrent) | ⚪ Bridge Created on Host |
+| `network.wan_vlan` | `eth4` | `vmbr100` | Dynamic PPPoE | VLAN 100 Tagged PPPoE Dialer (Mode 2 / Mode 3) | 🟢 Live (Metric 10) |
+| `network.database` | `eth5` | `vmbr7` | `10.70.70.1/24` | Dedicated Database Tier (Central DB, DBBackup) | 🟢 Live |
+| `network.wan_fiber` | USB Passthrough | USB Dongle | Dynamic PPPoE | Direct Fiber WAN (Emergency swing link) | ⚪ Standby |
+| `network.unsafe` | *Pending* | `vmbr4` | `10.40.40.1/24` | Unsafe Online (*Arr, qBittorrent) | ⚪ Bridge Created on Host |
 | `network.dmz` | *Pending* | `vmbr5` | `10.50.50.1/24` | Direct Ingress DMZ (Asterisk, Mail) | ⚪ Bridge Created on Host |
 | `network.mgmt_bots` | *Pending* | `vmbr6` | `10.60.60.1/24` | Management Bots Zone (Telegram) | ⚪ Bridge Created on Host |
-| `network.database` | *Pending* | `vmbr7` | `10.70.70.1/24` | Dedicated Database Tier (Central DB, DBBackup) | ⚪ Bridge Created on Host |

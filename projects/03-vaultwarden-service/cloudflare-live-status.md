@@ -16,7 +16,7 @@
    - Active systemd service running in **LXC 202** (`nginx-public` on `vmbr2`).
    - All inbound traffic terminates at `nginx-public` (`10.20.20.10:80`).
 3. **Application & WebSocket Reverse Proxy:**
-   - Proxies traffic cleanly to **LXC 220** (`vaultwarden` at `10.20.20.11:8085`).
+   - Proxies traffic cleanly to **LXC 220** (`vaultwarden` at `10.20.20.11:8443` HTTPS via internal Homelab Root CA).
 4. **Admin Panel Lockdown (`/admin`):**
    - Verified returning `HTTP/2 403 Forbidden` from external network. Reachable strictly from local workstation (`192.168.1.197`).
 5. **Backend Database Isolation:**

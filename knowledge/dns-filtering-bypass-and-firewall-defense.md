@@ -80,8 +80,7 @@ A VPN or Tor circuit encrypts the entire stream (DNS, SNI, IP payload) between t
    * **OpenVPN:** Drop outbound UDP/TCP port `1194`.
    * **IPsec / IKEv2 / L2TP:** Drop outbound UDP ports `500` and `4500`, and drop IP protocols `esp` (50) and `ah` (51).
 2. **Block Tor Directory Authorities & Public Relays:**
-   * Maintain an `ipset` of public Tor directory authorities and guard nodes and drop outbound traffic to them.
-   * If a self-hosted Tor bridge/node is run in the future, only that specific internal IP will be granted egress.
+   * Maintain an `ipset` of public Tor directory authorities and guard nodes and drop outbound traffic to them network-wide.
 3. **Explicit Whitelisting for Proxmox Infrastructure:**
    * Allow Cloudflare Tunnel (`cloudflared`) on `nginx-public` (LXC 202) over UDP 7844 / TCP 443 to Cloudflare IPs.
    * Allow Tailscale UDP port `41641` exclusively for designated host devices.

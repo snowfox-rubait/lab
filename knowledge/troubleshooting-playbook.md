@@ -64,6 +64,24 @@ ssh router "nft list chain inet fw4 dstnat_lan"
 ssh router "nft list chain inet fw4 forward_lan | grep -C 2 Block-DoT-DoQ"
 ```
 
+### 5. Production Services & Ingress (`ssh proxmox`)
+```bash
+# Wake Proxmox Host if sleeping / powered off (wait 1-2 minutes for convergence):
+wake-proxmox
+
+# Check public ingress endpoint status:
+curl -I https://vault.snowfox.live/
+
+# Inspect Cloudflare Tunnel status in LXC 202:
+ssh proxmox "pct exec 202 -- systemctl status cloudflared"
+
+# Inspect Vaultwarden container logs in LXC 220:
+ssh proxmox "pct exec 220 -- docker logs --tail 25 vaultwarden"
+
+# Inspect Central PostgreSQL status in LXC 210:
+ssh proxmox "pct exec 210 -- systemctl status postgresql"
+```
+
 ---
 
 ## 🩺 Diagnostic Playbooks

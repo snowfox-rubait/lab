@@ -33,16 +33,18 @@ Vaultwarden is our self-hosted, Bitwarden-compatible password manager. Because i
        │
        ├── Public Server Block:
        │     location /admin { return 404; }
-       │     location / { proxy_pass http://vaultwarden_backend; }
+       │     location / { proxy_pass https://10.20.20.11:8443; } # E2EE mTLS
        │     Inject Security Headers (HSTS, CSP with wasm-unsafe-eval, X-Frame-Options: DENY)
+       │     proxy_set_header X-Forwarded-Proto https;
+       │     proxy_set_header X-Forwarded-Ssl on;
        │
 [ Internal LAN Ingress (Workstation / Safe Zone Only) ]
        │
        ▼ (Private Management Server Block - Port 8443)
        ├── location /admin { allow 192.168.1.197; allow 10.10.10.0/24; deny all; proxy_pass ...; }
        │
-       ▼ (Plain HTTP / Loopback)
-[ Vaultwarden Container (10.20.20.11:8085) ]
+       ▼ (Encrypted HTTPS - Internal Homelab Root CA)
+[ Vaultwarden Container (10.20.20.11:8443 - ROCKET_TLS) ]
 ```
 
 ---

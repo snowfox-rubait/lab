@@ -19,7 +19,7 @@
              v                  v                  v
      [ Safe Internal ]   [ Public Ingress ]  [ Unsafe / DMZ ]
           vmbr1               vmbr2            vmbr4 / vmbr5
-    (Gitea, Immich, n8n)   (Vaultwarden)       (Tor, Asterisk)
+    (Gitea, Immich, n8n)   (Vaultwarden)       (*Arr, Asterisk)
              |                  |                  |
        TCP: 5432, 6379       TCP: 5432             X
              |                  |            (HARD DROPPED)
@@ -29,7 +29,7 @@
      +----------------------------------+
      |         vmbr7 (10.70.70.0/24)    |
      |  LXC 210: db-central (10.70.70.10)|
-     |  - PostgreSQL 16/17 Multi-Tenant |
+     |  - PostgreSQL 17.11 Multi-Tenant |
      |  - Redis 7 Session Store         |
      |  - Zero Outbound Internet Access |
      +----------------------------------+
@@ -48,7 +48,7 @@ Each connecting application is provisioned with an isolated role and database un
 
 | Application | Target Database | Dedicated Role | Allowed Source IP | Allowed Ports |
 | :--- | :--- | :--- | :--- | :--- |
-| **Vaultwarden** | `vaultwarden_db` | `vaultwarden_user` | `10.20.20.11/32` (`vmbr2`) | `TCP: 5432` |
+| **Vaultwarden** | `vaultwarden_db` | `vaultwarden_user` | `10.20.20.11/32` (routed via `10.70.70.0/24`) | `TCP: 5432` |
 | **Gitea** | `gitea_db` | `gitea_user` | `10.10.10.0/24` (`vmbr1`) | `TCP: 5432` |
 | **n8n Automation** | `n8n_db` | `n8n_user` | `10.10.10.0/24` (`vmbr1`) | `TCP: 5432`, `TCP: 6379` |
 | **Immich** | `immich_db` | `immich_user` | `10.10.10.0/24` (`vmbr1`) | `TCP: 5432`, `TCP: 6379` |

@@ -19,7 +19,7 @@ Not everything that uses the internet is a "public-facing online service." Confu
 | **Home Assistant Core** | **Inbound (Private LAN/Mesh)** | **NO** | **NO** | Tailscale node in `vmbr3` (`10.30.30.10`) |
 | **MQTT Broker (Mosquitto)** | **Local Inbound Only** | **NO** | **NO** | Local Wi-Fi VLAN 30 (`10.30.30.2:1883`) |
 | **Central Database (Postgres)**| **Isolated Offline** | **NO** | **NO** | Dedicated `vmbr7` (Internal pinholes only) |
-| **Tor / Torrent (*Arr)** | **Outbound Only** | **NO** | **NO** | Outbound NAT through VPN |
+| **Torrent (*Arr Stack)** | **Outbound Only** | **NO** | **NO** | Outbound NAT through VPN |
 
 ---
 

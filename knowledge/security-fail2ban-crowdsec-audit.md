@@ -2,14 +2,14 @@
 
 > **Date:** 2026-10-24  
 > **Audited Targets:** Proxmox VE Host (`192.168.1.2`), OpenWrt VM (`192.168.1.129`), Physical Archer C6 (`192.168.1.1`)  
-> **Current Status:** Not Configured (Evaluated for Deployment)
+> **Current Status:** 🟢 **Graduated to Live** (Fail2ban deployed and active on Proxmox VE Host; see [[security-fail2ban-proxmox]])
 
 ---
 
-## 🔍 Live Status Verification
+## 🔍 Initial Audit & Live Status
 
-A live scan across your infrastructure nodes confirms:
-- **Proxmox VE Host (`192.168.1.2`):** Neither `fail2ban` nor `crowdsec` is currently installed.
+During initial evaluation:
+- **Proxmox VE Host (`192.168.1.2`):** Evaluated and subsequently deployed with **Fail2ban** (active jails: `proxmox` Web GUI `:8006` and `sshd` `:22`). Full configuration documented in [[security-fail2ban-proxmox]].
 - **OpenWrt VM (`192.168.1.129`):** Neither `fail2ban` nor `crowdsec` is installed.
 - **Physical Router (`192.168.1.1`):** Neither is installed (relies on Dropbear key-only auth and `fw4` nftables rate limiting).
 

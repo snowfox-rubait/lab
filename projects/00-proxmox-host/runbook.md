@@ -141,7 +141,7 @@ To guarantee the laptop wakes up at 7:00 AM regardless of motherboard S5 power s
 - **Primary Wake Engine (Physical Router OpenWrt):**
   The Archer C6 router is always on (24/7). A cron job triggers at 7:00 AM sharp to send a Wake-on-LAN Magic Packet:
   ```cron
-  0 7 * * * /usr/bin/etherwake -i br-lan <MAC_PROXMOX_BUILTIN>
+  0 7 * * * /usr/bin/etherwake -i br-lan b8:88:e3:e7:5e:1f
   ```
 - **Secondary Wake Engine (Host `rtcwake`):**
   Sets the hardware RTC alarm at midnight shutdown as an internal fallback.
