@@ -190,3 +190,30 @@ Beyond basic password storage, Vaultwarden unlocks the full suite of enterprise-
 ## 💾 Backup Strategy
 - **Live Database:** Centralized PostgreSQL instance on Dedicated Database Tier (`vmbr7`, `10.70.70.2`).
 - **Cold Backup Sync:** Encrypted nightly dumps mirrored to offsite cloud (Cloudflare R2 / S3 / Supabase storage bucket) to guarantee zero data loss.
+
+---
+
+## 🔮 Future Roadmap & Automation Backlog
+
+The following capabilities are marked for in-depth exploration, hardening, and phased rollout:
+
+### 1. In-Depth Admin Panel Exploration & Feature Auditing
+- **Master Feature Audit:** Systematically explore and document every advanced toggle in the private `/admin` panel:
+  - Custom environment overrides.
+  - Granular cipher attachment limits and file storage quotas.
+  - Device session purge intervals and token lifetimes.
+  - Organization policy enforcement (e.g. minimum password strength, forced 2FA for all members).
+
+### 2. Transactional Email & Email OTP Provisioning (SMTP)
+- **Email Service Integration:** Connect a dedicated transactional email relay (e.g. Brevo, Mailgun, Amazon SES, or self-hosted mail on `vmbr5`):
+  - **Email-based 2FA / Login Verification Codes:** High-assurance OTPs dispatched on unfamiliar logins.
+  - **Automated Invitations:** Automatic delivery of tokenized registration links when adding family or paid customers.
+  - **Security Alerts:** Immediate email notifications on password changes, new device authorizations, or emergency access requests.
+
+### 3. Advanced Workflow & Security Automations
+- **n8n Automated Provisioning (Project 08):**
+  - Webhook integration listening for bKash/Nagad payment triggers to automatically call Vaultwarden API and issue invite tokens.
+- **HIBP Leak Incident Cascade (Project 08 & 10):**
+  - Scheduled 10-minute Bitwarden CLI vault audits triggering Telegram alerts and automated local PC malware triage.
+- **Automated Organization Sync & Directory Connector:**
+  - Automated syncing of users and collections using LDAP or custom API connectors.
