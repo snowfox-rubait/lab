@@ -10,6 +10,7 @@
 - [[#ADR-003 Isolated Low-Power IoT Wireless Tier, MAC Allowlisting, and MQTT Telemetry Routing]] *(2026-10-23)*
 - [[#ADR-004 Live Node Zone Realignment, WAN Metric Priority, and Zero-Drift Standardization]] *(2026-10-23)*
 - [[#ADR-005 Out-of-Band Pi-hole DNS Sinkhole and Strict Fallback Parental Controls]] *(2026-10-24)*
+- [[#ADR-006 Dedicated Database Tier vmbr7 and Zero-Trust Inter-Bridge Firewall Hardening]] *(2026-10-24)*
 
 ---
 
@@ -290,4 +291,60 @@ Utilized Pi-hole v6 FTL group management in `/etc/pihole/gravity.db`:
 - **Universal Adult Filtering:** Querying `pornhub.com` via router `192.168.1.1` returns `0.0.0.0` (Blocked).
 - **Universal Allowlisted Device Filtering:** Querying `pornhub.com` from PC `192.168.1.197` directly to Pi-hole returns `0.0.0.0` (Blocked).
 - **Firewall Ruleset:** `fw4 check` and `nft list chain inet fw4 dstnat_lan` confirmed active anti-bypass rules in kernel.
+
+---
+
+## ADR-006: Dedicated Database Tier (`vmbr7` - `10.70.70.0/24`) and Zero-Trust Inter-Bridge Firewall Hardening
+
+- **Date:** 2026-10-24
+- **Status:** Approved & Implemented on Hypervisor (`vmbr7` live)
+- **Scope:** Extraction of Database and DBBackup containers into a dedicated Proxmox bridge (`vmbr7`), strict directional inter-bridge firewall pinholes on OpenWrt VM, and complete lateral movement containment.
+
+---
+
+### 1. Context & Problem Statement
+Under the initial layout defined in ADR-001, both the Central Database (`Database`) and the backup pull job (`DBBackup`) resided inside `vmbr1` (Safe Internal Zone) alongside general application services (Gitea, Immich, NAS, Kiwix, BookStack, n8n).
+
+However, this topology introduced two security limitations:
+1. **Lateral Exposure from App Vulnerabilities:** If a web-facing or complex application container on `vmbr1` (e.g. BookStack or a community Docker container) is compromised, the attacker shares the same Layer-2 broadcast domain as the Central Database hosting master credential hashes, Vaultwarden records, and administrative data.
+2. **Public-to-Internal Ingress Dilution:** Vaultwarden in `vmbr2` (Public Ingress) requires database connectivity. Opening pinholes into `vmbr1` allows traffic from the public-facing edge into the primary internal storage and application zone.
+3. **Database Centralization Goal:** The user requires a centralized database architecture uniting all local self-hosted databases with remote cloud cold-backups (Supabase and Neon) into a single, dedicated data protection zone.
+
+---
+
+### 2. Architectural Decisions & Changes Made
+
+#### 2.1 Creation of Dedicated Database Zone (`vmbr7` - `10.70.70.0/24`)
+- **Proxmox Bridge:** Provisioned `vmbr7` on Proxmox host `/etc/network/interfaces` with zero physical ports (`bridge-ports none`).
+- **Core Router Interface:** Assigned subnet `10.70.70.0/24` with OpenWrt VM acting as default gateway on `10.70.70.1`.
+- **Workloads Hosted in `vmbr7`:**
+  - **`Database` (`10.70.70.10`):** Central multi-tenant PostgreSQL 16 & Redis container serving Gitea, Immich, Vaultwarden, n8n, and BookStack.
+  - **`DBBackup` (`10.70.70.11`):** Cold-backup sync container running scheduled automated `pg_dump` of local tenant databases and encrypted pull jobs from cloud providers (**Supabase** and **Neon**).
+
+#### 2.2 Strict Zero-Trust Inter-Bridge Firewall Policies
+Configured on OpenWrt VM (`openwrt-vm`):
+1. **Default Policy for `safe_database` (`vmbr7`):**
+   - `input`: `REJECT`
+   - `output`: `ACCEPT`
+   - `forward`: `REJECT` (Complete isolation by default; all cross-zone traffic is dropped).
+2. **Pinhole: Public Ingress (`vmbr2`) $\rightarrow$ Database (`vmbr7`):**
+   - Source: `10.20.20.11` (Vaultwarden only)
+   - Destination: `10.70.70.10:5432` (PostgreSQL)
+   - Action: `ACCEPT`. All other packets from `public_ingress` to `vmbr7` or `vmbr1` are dropped.
+3. **Pinhole: Safe Internal (`vmbr1`) $\rightarrow$ Database (`vmbr7`):**
+   - Source: `10.10.10.0/24` (Gitea, Immich, n8n, BookStack)
+   - Destination: `10.70.70.10` on ports `TCP:5432` (Postgres) and `TCP:6379` (Redis).
+   - Action: `ACCEPT`.
+4. **Hard Quarantine from Untrusted Zones:**
+   - From `vmbr4` (Tor / P2P), `vmbr5` (DMZ VoIP/Mail), `vmbr6` (Bots), and `vmbr0` (Home LAN / Guest): **HARD REJECT / DROP**. Zero database reachability.
+5. **Egress Internet Access:**
+   - `Database` engine (`10.70.70.10`): **ZERO direct internet access**.
+   - `DBBackup` container (`10.70.70.11`): Pinhole permitted outbound to WAN strictly for HTTPS/TLS database replication to Supabase and Neon endpoints.
+
+---
+
+### 3. Consequences & Impact
+- **Three-Tier Architecture:** Establishes classic industry-standard 3-Tier security: Ingress Tier (`vmbr2`) $\rightarrow$ Application Tier (`vmbr1`) $\rightarrow$ Database Tier (`vmbr7`).
+- **Data Protection:** A compromise in any single web application container in `vmbr1` or `vmbr2` cannot access the underlying database filesystem or intercept traffic of adjacent services.
+- **Zero Drift:** Bridge `vmbr7` is active in the Proxmox kernel and synchronized across all architecture documents, runbooks, and inventory tables.
 

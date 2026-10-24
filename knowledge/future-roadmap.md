@@ -86,8 +86,8 @@ The baseline infrastructure is live under [[../projects/07-pihole-dns-sinkhole/R
 | **Pi-hole DNS Sinkhole** | Debian 12 LXC (LXC 205) | Home LAN / OOB (`vmbr0`) | 🟢 **Graduated to Live (`07-pihole`)** |
 | **n8n Automation Engine** | Docker / Debian LXC | Safe Internal (`vmbr1`) | Low |
 | **Mermaid Diagram Server**| Docker / Debian LXC | Safe Internal (`vmbr1`) | Low |
-| **Central DB (PostgreSQL)**| Debian LXC | Safe Internal (`vmbr1`) | Medium |
-| **DB Backup Sync (Neon/Supa)**| Python / Bash Cron LXC | Safe Internal (`vmbr1`) | Low |
+| **Central DB (PostgreSQL)**| Debian LXC | Dedicated Database (`vmbr7`) | Medium |
+| **DB Backup Sync (Neon/Supa)**| Python / Bash Cron LXC | Dedicated Database (`vmbr7`) | Low |
 | **Gitea** | Debian LXC (Docker / Binary) | Safe Internal (`vmbr1`) | Low |
 | **Immich** | Docker LXC + GPU passthrough | Safe Internal (`vmbr1`) | Medium |
 | **File Browser / NAS** | Debian LXC + Disk Passthrough| Safe Internal (`vmbr1`) | Low |

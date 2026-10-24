@@ -90,14 +90,12 @@ flowchart TD
         subgraph Bridges["Proxmox Internal Bridges"]
             direction TB
 
-            %% Safe internal zone
-            subgraph ZoneSafe["Safe Zone - vmbr1<br/>Not Exposed to Internet"]
+            %% Safe internal zone (Applications Tier)
+            subgraph ZoneSafe["Safe Zone - vmbr1<br/>Internal Application Services"]
                 direction TB
 
                 NginxSafe["Nginx + Tailscale<br/>Cloudflare DNS - Gray Proxy"]
 
-                Database["Central Database<br/>PostgreSQL / Redis"]
-                DBBackup["Database Backup<br/>Outbound sync: Neon / Supabase"]
                 N8N["n8n Automation"]
                 Gitea["Gitea"]
                 Mermaid["Mermaid"]
@@ -107,7 +105,6 @@ flowchart TD
                 Kiwix["Kiwix - Offline ZIM"]
                 Jellyfin["Jellyfin / Plex"]
 
-                NginxSafe --> Database
                 NginxSafe --> N8N
                 NginxSafe --> Gitea
                 NginxSafe --> Mermaid
@@ -116,6 +113,16 @@ flowchart TD
                 NginxSafe --> Bookstack
                 NginxSafe --> Kiwix
                 NginxSafe --> Jellyfin
+            end
+
+            %% Dedicated Database & Data Protection Zone
+            subgraph ZoneDB["Dedicated Database Tier - vmbr7<br/>Central Multi-Tenant & Cloud Sync"]
+                direction TB
+
+                Database["Central Multi-Tenant Database<br/>PostgreSQL 16 & Redis<br/>Strict Port 5432 / 6379 Pinholes"]
+                DBBackup["Central Database Backup Engine<br/>Outbound Cold-Pull: Neon & Supabase<br/>Automated pg_dump to Local Storage"]
+
+                DBBackup -.->|Local Dump Socket| Database
             end
 
             %% Safe public services
@@ -166,6 +173,12 @@ flowchart TD
         OpenWrt <-->|Virtual NIC / vmbr4| ZoneUnsafe
         OpenWrt <-->|Virtual NIC / vmbr5| ZoneDMZ
         OpenWrt <-->|Virtual NIC / vmbr6| ZoneBots
+        OpenWrt <-->|Virtual NIC / vmbr7| ZoneDB
+
+        %% Inter-bridge Database Pinholes
+        ZoneSafe -.->|TCP:5432/6379 Pinholes| ZoneDB
+        Vaultwarden -.->|TCP:5432 Audited Pinhole| Database
+        DBBackup -.->|Outbound WAN Sync| OpenWrt
     end
 
     %% Physical router to Proxmox
