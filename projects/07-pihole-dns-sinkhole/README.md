@@ -135,10 +135,10 @@ While the current policy enforces a uniform baseline across the entire household
 
 | Related Project | Interface / Dependency Point | How It Interacts |
 | :--- | :--- | :--- |
-| [[../00-proxmox-host/runbook|00-proxmox-host]] | Host Hypervisor & Power Management | Hosts LXC 205 on `vmbr0`. Controls nightly sleep (00:00) and 7:00 AM RTC/WOL wake-up cycles. |
-| [[../01-dual-openwrt-routing/runbook|01-dual-openwrt-routing]] | Gateway Routing, DHCP & Firewall | Upstream `dnsmasq` sequential failover, DHCP option announcement, Layer-2 `fw4` MAC allowlist, and anti-bypass DNAT rules. |
-| [[../../knowledge/architecture-decisions#ADR-005 Out-of-Band Pi-hole DNS Sinkhole and Strict Fallback Parental Controls|ADR-005]] | Architectural Decision Log | Formal decision record, problem statement, threat model, and verification proofs. |
-| [[../../inventory|inventory.md]] | Asset Registry | Master entry for LXC 205, `MAC_PIHOLE_OOB`, and active deployment status. |
+| [00-proxmox-host](../00-proxmox-host/runbook.md) | Host Hypervisor & Power Management | Hosts LXC 205 on `vmbr0`. Controls nightly sleep (00:00) and 7:00 AM RTC/WOL wake-up cycles. |
+| [01-dual-openwrt-routing](../01-dual-openwrt-routing/runbook.md) | Gateway Routing, DHCP & Firewall | Upstream `dnsmasq` sequential failover, DHCP option announcement, Layer-2 `fw4` MAC allowlist, and anti-bypass DNAT rules. |
+| [ADR-005](../../knowledge/architecture-decisions.md#adr-005-out-of-band-pi-hole-dns-sinkhole-and-strict-fallback-parental-controls) | Architectural Decision Log | Formal decision record, problem statement, threat model, and verification proofs. |
+| [inventory.md](../../inventory.md) | Asset Registry | Master entry for LXC 205, `MAC_PIHOLE_OOB`, and active deployment status. |
 
 ---
 

@@ -1,7 +1,7 @@
 # 🤖 Project 09: Centralized Telegram Bot & Alerting Hub
 
 > **Project ID:** `09-telegram-bot-hub`  
-> **Target Subnet:** Safe Offline Bridge (`vmbr1`, `10.10.10.0/24`)  
+> **Target Subnet:** Safe Internal Zone (`vmbr1`, `10.10.10.0/24`) or Management Bots Zone (`vmbr6`, `10.60.60.0/24`)  
 > **Status:** Planned / Architecture & Security Blueprint  
 > **Core Purpose:** The central interactive notification, operations, and alerting clearinghouse for all homelab services, hypervisors, network appliances, and automation pipelines.
 

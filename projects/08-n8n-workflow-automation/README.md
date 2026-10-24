@@ -1,7 +1,7 @@
 # 🔄 Project 08: n8n Workflow Automation Hub
 
 > **Project ID:** `08-n8n-workflow-automation`  
-> **Target Subnet:** Safe Offline Bridge (`vmbr1`, `10.10.10.0/24`) or Safe Public Ingress (`vmbr2`, `10.20.20.0/24`)  
+> **Target Subnet:** Safe Internal Zone (`vmbr1`, `10.10.10.0/24`)  
 > **Status:** Planned / Architecture & Security Blueprint  
 > **Core Purpose:** Centralized self-hosted low-code workflow automation orchestrating homelab services, scheduled telemetry, security notifications, and incident response pipelines.
 
@@ -40,7 +40,7 @@ n8n serves as the homelab's central automation engine. Instead of scattering har
 └──────────────────────┘ └───────────────────────────┘
 ```
 
-- **Network Zone:** Placed inside **Safe Offline Bridge (`vmbr1`)** with granular egress routing to `vmbr2` (Vaultwarden) and internet access via physical router gateway (`192.168.1.1`) for external APIs (Telegram, HIBP).
+- **Network Zone:** Placed inside **Safe Internal Zone (`vmbr1`, `10.10.10.0/24`)** with default gateway `10.10.10.1` (OpenWrt VM), with granular firewall pinholes to `vmbr2` (`10.20.20.11:8443` Vaultwarden) and `vmbr7` (`10.70.70.10:5432` PostgreSQL). Outbound internet access routes through OpenWrt VM NAT for external APIs (Telegram, HIBP).
 - **Database Dependency:** Centralized PostgreSQL backend on Dedicated Database Tier (`vmbr7`, `10.70.70.10:5432`).
 - **Security Ingress:** Accessible internally at `n8n.snowfox.live` via `nginx-safe` reverse proxy; public webhook triggers authenticated via HMAC signatures.
 

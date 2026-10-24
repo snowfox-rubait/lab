@@ -198,3 +198,31 @@ ssh proxmox "pct exec 205 -- /usr/local/bin/pihole updateGravity"
 # Inspect group and client assignments in gravity database:
 ssh proxmox "pct exec 205 -- sqlite3 /etc/pihole/gravity.db 'SELECT c.ip, c.comment, g.name FROM client c JOIN client_by_group cbg ON c.id=cbg.client_id JOIN \"group\" g ON cbg.group_id=g.id;'"
 ```
+
+---
+
+## 🛡️ Host Intrusion Prevention (Fail2ban)
+
+Proxmox VE is protected against local brute-force attacks on the Web GUI (`:8006`) and SSH (`:22`) via Fail2ban with `nftables-multiport` actions:
+
+- **Configuration:** `/etc/fail2ban/jail.local` (Tracked in [[services/jail.local]])
+- **Active Jails:**
+  - `proxmox`: Monitors `/var/log/pveproxy/access.log` (Bans IPs after 3 failed web logins for 24 hours).
+  - `sshd`: Monitors systemd journal for SSH authentication failures (Aggressive mode, 24-hour ban).
+- **Allowlist:** Workstation PC (`192.168.1.197`), physical router (`192.168.1.1`), and loopback are permanently exempt.
+- **Terminal Telemetry Dashboard:**
+  ```bash
+  ssh proxmox "/usr/local/bin/fail2ban-summary"
+  ```
+  *(Source tracked in [[scripts/fail2ban-summary]])*
+- **Operational Commands:**
+  ```bash
+  # Check status of all jails:
+  ssh proxmox "fail2ban-client status"
+
+  # Check active bans on Proxmox Web GUI:
+  ssh proxmox "fail2ban-client status proxmox"
+
+  # Manually unban an IP:
+  ssh proxmox "fail2ban-client unban <IP_ADDRESS>"
+  ```

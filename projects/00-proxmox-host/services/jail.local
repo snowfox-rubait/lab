@@ -1,0 +1,27 @@
+# /etc/fail2ban/jail.local on Proxmox VE Host (192.168.1.2)
+# Intrusion Prevention for PVE Web GUI (:8006) and Host SSH (:22)
+
+[DEFAULT]
+bantime  = 24h
+findtime = 10m
+maxretry = 3
+banaction = nftables-multiport
+backend = systemd
+
+# Allowlist Workstation PC, Physical Router, and loopback
+ignoreip = 127.0.0.1/8 ::1 192.168.1.197 192.168.1.1 10.0.0.0/8
+
+[sshd]
+enabled = true
+port    = 22
+mode    = aggressive
+
+[proxmox]
+enabled  = true
+port     = 8006
+filter   = proxmox
+logpath  = /var/log/pveproxy/access.log
+backend  = polling
+maxretry = 3
+bantime  = 24h
+findtime = 10m

@@ -1,0 +1,28 @@
+#!/bin/bash
+# Fail2ban Terminal Telemetry Dashboard
+echo "=========================================================="
+echo "          🛡️ PROXMOX INTRUSION DEFENSE STATUS             "
+echo "=========================================================="
+uptime -p
+echo "----------------------------------------------------------"
+JAILS=$(fail2ban-client status | grep "Jail list" | sed -E 's/^[^:]+:[ \t]+//' | tr ',' ' ')
+
+for JAIL in $JAILS; do
+    echo "📌 Jail: [$JAIL]"
+    STATUS=$(fail2ban-client status $JAIL)
+    CUR_FAILED=$(echo "$STATUS" | grep "Currently failed:" | awk '{print $NF}')
+    TOT_FAILED=$(echo "$STATUS" | grep "Total failed:" | awk '{print $NF}')
+    CUR_BANNED=$(echo "$STATUS" | grep "Currently banned:" | awk '{print $NF}')
+    TOT_BANNED=$(echo "$STATUS" | grep "Total banned:" | awk '{print $NF}')
+    BANNED_IPS=$(echo "$STATUS" | grep "Banned IP list:" | sed -E 's/^[^:]+:[ \t]+//')
+    
+    printf "   • Failed Attempts : %s (Current) | %s (Total)\n" "$CUR_FAILED" "$TOT_FAILED"
+    printf "   • Banned Hosts    : %s (Active)  | %s (Historical)\n" "$CUR_BANNED" "$TOT_BANNED"
+    if [ -n "$BANNED_IPS" ]; then
+        printf "   • Active Ban IPs  : %s\n" "$BANNED_IPS"
+    else
+        printf "   • Active Ban IPs  : None (All Clear)\n"
+    fi
+    echo ""
+done
+echo "=========================================================="

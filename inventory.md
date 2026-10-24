@@ -113,7 +113,6 @@ The HP EliteDesk Mini PC currently runs several local services:
 | **Central Database Service (LXC 210)** | Debian 13 LXC | `10.70.70.10` (`vmbr7`) | 🟢 **Live** | Multi-tenant PostgreSQL 17.11 (`scram-sha-256`, SSL enforced) + Redis 7 (`projects/12-central-database-service`) |
 | **Safe Internal Reverse Proxy (LXC 201)**| Proxmox LXC | `10.10.10.10` (`vmbr1`) | ⚪ **Planned** | Internal proxy for Gitea, Immich, n8n (`projects/02-per-zone-nginx-proxies`) |
 | **DBBackup Sync Container** | Proxmox LXC | `10.70.70.11` (`vmbr7`) | ⚪ **Planned** | Outbound cold-backup sync for Supabase & Neon, plus automated local pg_dumps |
-| **DBBackup Sync Container** | Proxmox LXC | `10.70.70.11` (`vmbr7`) | ⚪ **Planned** | Outbound cold-backup sync for Supabase & Neon, plus automated local pg_dumps |
 | **Home Assistant Core** | Proxmox VM / LXC | `10.30.30.5` (`vmbr3`) | ⚪ **Planned** | Planned smart home hub with native Tailscale |
 | **Mosquitto MQTT Broker** | Proxmox LXC | `10.30.30.2` (`vmbr3`) | ⚪ **Planned** | Planned broker for ESP32/ESP8266 telemetry (`EXP-003`) |
 | **Management Bots (LXC)** | Proxmox LXC | `10.60.60.10` (`vmbr6`) | ⚪ **Planned** | Planned isolated bot container with forced-command SSH wrapper |
