@@ -1,4 +1,4 @@
-# 🔒 Internal PKI & Complete End-to-End Encryption (E2EE) Standard
+# 🔒 Internal PKI, Zero-Trust Transport & End-to-End Encryption (E2EE) Standards
 
 > **Status:** Live & Enforced  
 > **Authority:** Homelab Root CA (`/root/homelab-pki/ca/ca.crt` on Proxmox)  
@@ -6,9 +6,16 @@
 
 ---
 
-## 🎯 Architecture & Zero-Cleartext Transit Model
+## 🎯 Cryptographic Architecture & Model Demarcation
 
-Every single segment of network traffic across physical cables, Proxmox Linux bridges, and inter-container sockets is **strictly encrypted with cryptographic TLS certificates**:
+It is essential to distinguish between **Zero-Knowledge Client-Side Encryption** and **Zero-Cleartext Transport Encryption (PKI / TLS)**:
+
+1. **Application-Level End-to-End Encryption (E2EE):**  
+   Enforced at the client vault level by Vaultwarden / Bitwarden clients. Passwords, notes, and cryptographic seeds are encrypted client-side using `AES-256-CBC` / `ChaCha20-Poly1305` with keys derived via `Argon2id` or `PBKDF2`. The Vaultwarden server and central PostgreSQL database store only opaque ciphertext payloads.
+2. **Infrastructure-Level Mutual Transport Encryption (Internal PKI / TLS):**  
+   Guarantees that no plaintext metadata, HTTP headers, authentication tokens, or database query streams travel over Linux virtual bridges, physical Ethernet cables, or container namespaces unencrypted.
+
+Every single segment of network transit across physical cables, Proxmox Linux bridges, and inter-container sockets is **strictly encrypted**:
 
 ```
 [ Browser / Phone ]

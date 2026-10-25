@@ -66,3 +66,29 @@ Each connecting application is provisioned with an isolated role and database un
 - **Swap Assigned:** 1024 MB
 - **Disk:** 15 GB on `local-lvm` thin pool
 - **Network Interface:** `eth0` -> `vmbr7` (`10.70.70.10/24`, Gateway: `10.70.70.1`)
+
+---
+
+## 💾 Backup Data Flow & Cold Replication Architecture
+
+To prevent architectural ambiguity regarding database backup direction and storage lifecycles:
+
+```
+[ db-central (LXC 210) ]
+        │
+   TCP: 5432 (PostgreSQL Read Stream via dedicated role 'backup_sync_bot')
+        ▼
+[ DBBackup Container (Planned LXC on vmbr7: 10.70.70.11) ]
+        │
+        ├── 1. Generate Local Dump: Automated 'pg_dump' across active tenant databases
+        ├── 2. Local Encryption: GPG/Age encryption applied to snapshot artifacts
+        ├── 3. Local Retention: Stored to local Proxmox backup storage (/backup/db)
+        │
+        ▼ (Outbound HTTPS / TLS via OpenWrt Firewall Pinhole strictly for Replication)
+[ Remote Cloud Backup Endpoints (Supabase / Neon / Offsite S3) ]
+```
+
+### Key Principles:
+1. **Query Direction vs. Storage Direction:** The backup daemon initiates an authenticated database read connection to PostgreSQL on `db-central`, generates compressed snapshot artifacts on local storage, and pushes encrypted backups to external cloud targets.
+2. **Online Consistency:** Dumps run online using PostgreSQL multi-version concurrency control (MVCC) without requiring database downtime or cold stops.
+3. **Restoration Drills:** Periodic disaster recovery verification takes place by importing test dumps into an isolated staging schema to verify schema and data integrity.

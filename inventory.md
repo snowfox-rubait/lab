@@ -162,15 +162,17 @@ Host laptop
 
 The OpenWrt VM (VM 100) interfaces are unified with the master architecture zones:
 
-| UCI Interface Name | Linux Device | Proxmox Bridge | Gateway Subnet | Architectural Role | Current Status |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| `network.homelan` | `eth0` | `vmbr0` | `192.168.1.129/24` | Out-of-Band Management & Physical LAN link | 🟢 Live |
-| `network.safe_internal` | `eth1` | `vmbr1` | `10.10.10.1/24` | Safe Internal Zone (Gitea, Immich, n8n, NAS) | 🟢 Live |
-| `network.public_ingress`| `eth2` | `vmbr2` | `10.20.20.1/24` | Safe Public Ingress (Tunnel, Vaultwarden) | 🟢 Live |
-| `network.ha_iot` | `eth3` | `vmbr3` | `10.30.30.1/24` | Home Assistant & IoT Zone (VLAN 30 Trunk) | 🟢 Live |
-| `network.wan_vlan` | `eth4` | `vmbr100` | Dynamic PPPoE | VLAN 100 Tagged PPPoE Dialer (Mode 2 / Mode 3) | 🟢 Live (Metric 10) |
-| `network.database` | `eth5` | `vmbr7` | `10.70.70.1/24` | Dedicated Database Tier (Central DB, DBBackup) | 🟢 Live |
-| `network.wan_fiber` | USB Passthrough | USB Dongle | Dynamic PPPoE | Direct Fiber WAN (Emergency swing link) | ⚪ Standby |
-| `network.unsafe` | *Pending* | `vmbr4` | `10.40.40.1/24` | Unsafe Online (*Arr, qBittorrent) | ⚪ Bridge Created on Host |
-| `network.dmz` | *Pending* | `vmbr5` | `10.50.50.1/24` | Direct Ingress DMZ (Asterisk, Mail) | ⚪ Bridge Created on Host |
-| `network.mgmt_bots` | *Pending* | `vmbr6` | `10.60.60.1/24` | Management Bots Zone (Telegram) | ⚪ Bridge Created on Host |
+### Canonical Host, Bridge & Guest Interface Map
+
+| Proxmox Guest vNIC | Physical Port / Host Parent | Proxmox Bridge | OpenWrt Guest Device | Gateway / Subnet | Architectural Role | Current Status |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| `net0` (`virtio`) | `enp12s0` (Built-in GbE) | `vmbr0` | `eth0` (`homelan`) | `192.168.1.129/24` | Management LAN & Mode 1 Gateway Link | 🟢 Live |
+| `net1` (`virtio`) | *None (Host virtual)* | `vmbr1` | `eth1` (`safe_internal`)| `10.10.10.1/24` | Safe Internal Zone (Gitea, Immich, n8n) | 🟢 Live |
+| `net2` (`virtio`) | *None (Host virtual)* | `vmbr2` | `eth2` (`public_ingress`)| `10.20.20.1/24`| Public Ingress (Nginx, Cloudflare, Vaultwarden) | 🟢 Live |
+| `net3` (`virtio`) | `enp12s0.30` (VLAN 30) | `vmbr3` | `eth3` (`ha_iot`) | `10.30.30.1/24` | Isolated IoT & Home Assistant VLAN | 🟢 Live |
+| `net4` (`virtio`) | `enp12s0.100` (VLAN 100)| `vmbr100`| `eth4` (`wan_vlan`) | Dynamic PPPoE | Trunked Direct ISP PPPoE Dialer (Mode 2/3) | 🟢 Live (Metric 10) |
+| `net5` (`virtio`) | *None (Host virtual)* | `vmbr7` | `eth5` (`database`) | `10.70.70.1/24` | Dedicated Isolated Database Tier (`db-central`)| 🟢 Live |
+| `usb0` (CDC Ether) | USB 2.0 Bus Passthrough | *Direct Guest USB* | `eth6` (`wan_fiber`) | Dynamic PPPoE | Direct Fiber Dongle (Emergency Backup WAN) | ⚪ Standby |
+| *Pending* | *None (Host virtual)* | `vmbr4` | *Pending* | `10.40.40.1/24` | Unsafe Online Zone (*Arr, Torrent) | ⚪ Bridge Ready |
+| *Pending* | *None (Host virtual)* | `vmbr5` | *Pending* | `10.50.50.1/24` | Direct Protocol DMZ (Asterisk, Mail) | ⚪ Bridge Ready |
+| *Pending* | *None (Host virtual)* | `vmbr6` | *Pending* | `10.60.60.1/24` | Management Bots Zone (Telegram Bot) | ⚪ Bridge Ready |
