@@ -89,6 +89,12 @@ To prevent architectural ambiguity regarding database backup direction and stora
 ```
 
 ### Key Principles:
-1. **Query Direction vs. Storage Direction:** The backup daemon initiates an authenticated database read connection to PostgreSQL on `db-central`, generates compressed snapshot artifacts on local storage, and pushes encrypted backups to external cloud targets.
-2. **Online Consistency:** Dumps run online using PostgreSQL multi-version concurrency control (MVCC) without requiring database downtime or cold stops.
-3. **Restoration Drills:** Periodic disaster recovery verification takes place by importing test dumps into an isolated staging schema to verify schema and data integrity.
+1. **Query Direction vs. Storage Direction:** 
+   - **Local Database Protection:** The backup container (`10.70.70.11`) initiates authenticated read queries via role `backup_sync_bot` to local databases on `db-central` (`10.70.70.10`), executes `pg_dump`, encrypts the snapshot, stores it locally on Proxmox host backup storage, and optionally replicates cold snapshots offsite.
+   - **External Managed Database Sync (Neon & Supabase):** For external cloud projects hosted on Neon and Supabase, the container executes scheduled outbound cold pulls via HTTPS/TLS (over an explicit OpenWrt firewall pinhole), archiving offsite databases into the homelab storage vault.
+   - **Zero Inbound WAN Traffic:** Neither `db-central` nor `DBBackup` accepts inbound traffic from the internet; all WAN connectivity is strictly outbound from `10.70.70.11` for cloud API / TLS synchronization.
+2. **PostgreSQL Role Scoping & Isolation:**
+   - Dedicated service accounts (`vaultwarden_user`, `gitea_user`, `backup_sync_bot`) have database-scoped permissions. `backup_sync_bot` is restricted to read-only `pg_dump` privileges and cannot mutate tables or modify database schemas.
+3. **Online Consistency & Restoration Drills:**
+   - Dumps run online using PostgreSQL multi-version concurrency control (MVCC) without requiring database downtime or cold stops.
+   - Disaster recovery verification consists of periodic import tests into an isolated test schema (`staging_restore_test`) to verify foreign keys, sequence states, and cipher counts.

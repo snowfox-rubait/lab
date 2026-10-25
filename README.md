@@ -126,8 +126,8 @@ flowchart TD
                 DBBackup -.->|Local Dump Socket| Database
             end
 
-            %% Safe public services
-            subgraph ZonePublicSafe["Safe Online Services - vmbr2"]
+            %% Public ingress & hardened internet services
+            subgraph ZonePublicSafe["Public Ingress & Hardened Services - vmbr2"]
                 direction TB
 
                 NginxPublic["Nginx Public Ingress + cloudflared<br/>LXC 202 (10.20.20.10)<br/>Bangladesh Edge Geo-Fence"]

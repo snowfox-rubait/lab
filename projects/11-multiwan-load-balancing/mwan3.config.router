@@ -80,8 +80,8 @@ config member 'wan_vm_m2_backup'
 
 # --- Routing Policies ---
 
-# Balanced 50/50 (Round-Robin with sticky session)
-config policy 'balanced_loadsharing'
+# Balanced 50/50 (Round-Robin with sticky session; name <= 15 chars for mwan3 compliance)
+config policy 'balanced_50_50'
 	list use_member 'wan_m1_w3'
 	list use_member 'wan_vm_m1_w3'
 	option last_resort 'unreachable'
@@ -120,7 +120,7 @@ config rule 'https_sticky'
 	option proto 'tcp'
 	option sticky '1'
 	option timeout '3600'
-	option use_policy 'balanced_loadsharing'
+	option use_policy 'balanced_50_50'
 
 # Rule 4: P2P / Torrent traffic directed to VM WAN (offload CPU from physical router)
 config rule 'p2p_bittorrent'
@@ -135,4 +135,4 @@ config rule 'default_rule'
 	option proto 'all'
 	option sticky '1'
 	option timeout '600'
-	option use_policy 'balanced_loadsharing'
+	option use_policy 'balanced_50_50'

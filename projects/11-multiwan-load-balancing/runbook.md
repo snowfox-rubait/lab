@@ -50,6 +50,10 @@ uci commit firewall
 /etc/init.d/firewall reload
 ```
 
+> [!NOTE]
+> **Transit Network Semantics & Verification:**
+> Reusing `br-lan` as a shared Layer-2 carrier with transit address `192.168.1.254/24` allows inter-router routing without an extra physical Ethernet cable. Packets marked by `mwan3` are forwarded via policy routing table `192.168.1.129` where the VM performs SNAT before exiting onto its WAN interface. Validate firewall zone binding and conntrack fwmark rules during off-peak testing before enabling persistent multi-WAN production routes.
+
 ### Phase 3: Copy and Enable MWAN3 Config
 From workstation PC:
 ```sh
@@ -79,7 +83,7 @@ Check that both interfaces appear:
 ```sh
 ssh root@192.168.1.1 "iptables -t mangle -vnL"
 ```
-Verify packets are hitting `mwan3_policy_balanced_loadsharing` and receiving fwmarks.
+Verify packets are hitting `mwan3_policy_balanced_50_50` and receiving fwmarks.
 
 ### 3. Check Real-Time Public IP Distribution
 Run from client workstation (`rubait`):
