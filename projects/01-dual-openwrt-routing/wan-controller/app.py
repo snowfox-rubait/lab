@@ -1,6 +1,17 @@
-import http.server, socketserver, json, subprocess, urllib.parse
+import http.server, socketserver, json, subprocess, urllib.parse, datetime, sys
 
 PORT = 8080
+LOG_FILE = "/var/log/wan-controller-audit.log"
+ALLOWED_HOSTS = {"192.168.1.130", "127.0.0.1", "localhost"}
+
+def audit_log(client_ip, mode, result):
+    ts = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    entry = f"{ts} | client={client_ip} | mode={mode} | result={result}\n"
+    try:
+        with open(LOG_FILE, "a") as f:
+            f.write(entry)
+    except Exception:
+        sys.stderr.write(f"AUDIT ERROR: {entry}")
 
 HTML = """<!DOCTYPE html>
 <html lang="en">
@@ -174,14 +185,19 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 self.wfile.write(json.dumps({"error": "Unsupported Media Type. State-changing requests must be application/json."}).encode())
                 return
 
-            origin = self.headers.get("Origin") or self.headers.get("Referer") or ""
-            # Verify origin matches local LAN controller if present
-            if origin and not any(allowed in origin for allowed in ["192.168.1.130", "127.0.0.1", "localhost"]):
-                self.send_response(403)
-                self.send_header("Content-Type", "application/json")
-                self.end_headers()
-                self.wfile.write(json.dumps({"error": "Forbidden: Untrusted Origin"}).encode())
-                return
+            # Strictly parse and validate Origin / Referer against authorized hostnames
+            origin_header = self.headers.get("Origin") or self.headers.get("Referer")
+            if origin_header:
+                parsed_origin = urllib.parse.urlparse(origin_header)
+                hostname = parsed_origin.hostname
+                if not hostname or hostname not in ALLOWED_HOSTS:
+                    self.send_response(403)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"error": f"Forbidden: Untrusted Origin '{hostname}'"}).encode())
+                    return
+
+            client_ip = self.headers.get("X-Real-IP") or self.client_address[0]
 
             content_length = int(self.headers.get("Content-Length", 0))
             if content_length > 1024:
@@ -202,10 +218,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             if mode in ["1", "2", "3"]:
                 try:
                     out = subprocess.check_output(["ssh", "root@192.168.1.1", "wan-mode", mode], stderr=subprocess.STDOUT, timeout=15).decode()
+                    audit_log(client_ip, mode, "SUCCESS")
                 except Exception as e:
                     out = str(e)
+                    audit_log(client_ip, mode, f"ERROR: {e}")
             else:
                 out = f"Invalid mode: '{mode}'. Allowed: 1, 2, 3"
+                audit_log(client_ip, str(mode), "REJECTED_INVALID_MODE")
 
             self.send_response(200)
             self.send_header("Content-Type", "application/json")

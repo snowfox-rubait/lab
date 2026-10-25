@@ -1,4 +1,4 @@
-b# 🧪 Homelab Engineering Lab Notebook
+# 🧪 Homelab Engineering Lab Notebook
 
 Welcome to the lab repository. This vault tracks all architecture experiments, failure logs, knowledge base articles, and operational runbooks across our homelab infrastructure.
 
@@ -99,7 +99,7 @@ flowchart TD
 
                 N8N["n8n Automation"]
                 Gitea["Gitea"]
-                Mermaid["Mermaid"]
+                Mermaid["Mermaid Diagram Server<br/>(Live Editor / Renderer)"]
                 Immich["Immich"]
                 NAS["HDD NAS / FileBrowser"]
                 Bookstack["BookStack"]

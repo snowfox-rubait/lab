@@ -38,7 +38,7 @@
 ### Key Security Standards:
 1. **Zero Outbound Internet Access:** The database container has no WAN egress rule. Even in the event of an application SQL-injection or code exploit, automated payloads cannot call home or exfiltrate data.
 2. **Dedicated Database Bridge (`vmbr7`):** Shares zero Layer-2 broadcast traffic with web applications, public tunnels, or IoT sensors.
-3. **Host Version Parity (Debian 13 Trixie):** Matching the Proxmox host's base OS release eliminates cgroup/libc mismatches, minimizing namespace overhead and maximizing KSM memory deduplication.
+3. **Standardized OS Base (Debian 13 Trixie):** Using Debian 13 matches the Proxmox 9 host's user-space release, streamlining package management, tooling consistency, and shared libraries across internal containers.
 
 ---
 

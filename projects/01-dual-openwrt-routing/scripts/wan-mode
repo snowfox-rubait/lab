@@ -15,27 +15,51 @@ case "$MODE" in
         ;;
     2)
         echo "=== Switching to MODE 2 (OpenWrt VM Main) with 45s Watchdog ==="
-        cp /etc/config/network /tmp/network.mode1.bak
+        # Preserve golden known-good Mode 1 configuration if not already present
+        if [ ! -f /etc/config/network.mode1.gold ]; then
+            cp /etc/config/network /etc/config/network.mode1.gold
+        fi
+        cp /etc/config/network.mode1.gold /tmp/network.mode1.bak
         
         ifdown wan
         uci set network.wan.auto='0'
         uci commit network
 
-        ssh -y -i /root/.ssh/id_dropbear root@192.168.1.129 "ifup wan_vlan" 2>/dev/null || true
+        if ! ssh -y -i /root/.ssh/id_dropbear root@192.168.1.129 "ifup wan_vlan"; then
+            echo "[Error] Failed to dispatch ifup wan_vlan to VM! Aborting Mode 2 switch."
+            cp /tmp/network.mode1.bak /etc/config/network
+            /etc/init.d/network reload
+            ifup wan
+            exit 1
+        fi
 
         (
-            echo "[Watchdog] Waiting 45s for OpenWrt VM to establish WAN..."
+            echo "[Watchdog] Waiting 45s for OpenWrt VM to establish WAN session & routes..."
             sleep 45
             
-            # Verify VM WAN interface status, route path, and ping reachability
+            # 1. Verify VM WAN interface status
             VM_UP=$(ssh -y -i /root/.ssh/id_dropbear root@192.168.1.129 "ifstatus wan_vlan | grep -o '\"up\": true'" 2>/dev/null || echo "")
+            # 2. Verify router's active default route uses VM gateway
             DEFAULT_VIA_VM=$(ip route | grep "default via 192.168.1.129" || true)
+            # 3. Test end-to-end outbound ICMP reachability
+            OUTBOUND_OK=""
+            if ping -c 3 1.1.1.1 >/dev/null 2>&1; then
+                OUTBOUND_OK="true"
+            fi
 
-            if [ -n "$VM_UP" ] && ping -c 3 1.1.1.1 >/dev/null 2>&1; then
-                echo "[Watchdog] Internet & VM route verified (wan_vlan: up)! Mode 2 successful."
+            echo "[Watchdog] Check 1 (VM wan_vlan up): '$VM_UP'"
+            echo "[Watchdog] Check 2 (Default via VM 192.168.1.129): '$DEFAULT_VIA_VM'"
+            echo "[Watchdog] Check 3 (Outbound Ping 1.1.1.1): '$OUTBOUND_OK'"
+
+            if [ -n "$VM_UP" ] && [ -n "$DEFAULT_VIA_VM" ] && [ -n "$OUTBOUND_OK" ]; then
+                echo "[Watchdog] All 3 safety checks passed! Mode 2 switch successful."
                 rm -f /tmp/network.mode1.bak
             else
-                echo "[Watchdog] WAN or route verification failed in Mode 2! Auto-reverting to Mode 1..."
+                REASON=""
+                [ -z "$VM_UP" ] && REASON="${REASON}[VM interface not up] "
+                [ -z "$DEFAULT_VIA_VM" ] && REASON="${REASON}[Default route not via VM] "
+                [ -z "$OUTBOUND_OK" ] && REASON="${REASON}[Outbound ping failed] "
+                echo "[Watchdog] Safety validation failed: $REASON! Auto-reverting to Mode 1..."
                 ssh -y -i /root/.ssh/id_dropbear root@192.168.1.129 "ifdown wan_vlan" 2>/dev/null || true
                 cp /tmp/network.mode1.bak /etc/config/network
                 /etc/init.d/network reload

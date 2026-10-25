@@ -22,13 +22,18 @@
 
 In enterprise network defense, port-level filtering provides **high bypass resistance**, but cannot be considered absolute without host-level MDM:
 1. **Conventional Port 53 Overrides:** 100% neutralized. Any client attempting to use `8.8.8.8:53` or `1.1.1.1:53` is transparently DNAT-redirected to `192.168.1.1:53` and filtered through Pi-hole.
-2. **DNS-over-TLS & DNS-over-QUIC (Port 853):** 100% neutralized. Rejected at the firewall, forcing Android "Private DNS" and iOS encrypted clients to fall back to port 53.
+2. **DNS-over-TLS & DNS-over-QUIC (Port 853):** High mitigation. Rejected at the firewall for restricted clients. In strict-mode mobile OS clients, blocking port 853 may cause name resolution failures rather than automatic fallback to port 53.
 3. **DNS-over-HTTPS (DoH Port 443):**
    - *Challenge:* DoH packets travel over standard TLS port 443, indistinguishable from ordinary HTTPS web traffic.
-   - *Mitigation:* Pi-hole returns NXDOMAIN for the Mozilla Firefox canary domain (`use-application-dns.net`), disabling automatic browser DoH. Router blocklists drop known bootstrap IPs for major public DoH endpoints.
-4. **MAC Address Randomization & Spoofing:**
-   - Layer-2 MAC allowlists are an operational heuristic, not cryptographic device identity.
-   - Non-allowlisted family and repeater clients remain in the restricted baseline. If an allowlisted device enables MAC randomization, it automatically falls back into the restricted group.
+   - *Mitigation:* Pi-hole returns NXDOMAIN for the Mozilla Firefox canary domain (`use-application-dns.net`), disabling automatic browser DoH. Router blocklists drop known bootstrap IPs for major public DoH endpoints. However, arbitrary public DoH resolvers on unlisted IPs cannot be guaranteed blocked without deep TLS interception.
+4. **Administrative Trust vs. DNS Enforcement Distinction:**
+   - Layer-2 MAC allowlists provide administrative network privileges (e.g. access to WAN controller API, Proxmox GUI, and unthrottled routing).
+   - In firewall rules where allowlisted MACs are exempt from Port 53 DNAT and Port 853 rejection, those devices retain the ability to configure custom DNS resolvers or encrypted tunnels, whereas non-allowlisted devices are strictly pinned to the gateway DNS.
+   - If universal filtering is required across 100% of devices regardless of trust level, DNAT redirection must be applied globally across all LAN devices.
+5. **Dnsmasq `strictorder` Operational Characteristics:**
+   - `strictorder` causes dnsmasq to query upstream servers in configured order rather than querying them in parallel or round-robin.
+   - During silent socket timeouts when Pi-hole is offline, an initial query latency penalty (measured empirically at ~2.51s) occurs before failing over to Cloudflare Family (`1.1.1.3`).
+   - If an upstream returns an explicit non-timeout response or NXDOMAIN, dnsmasq does not retry fallback upstreams. Seamless filtering continuity relies on the fallback resolver (`1.1.1.3`) enforcing the equivalent adult/malware blocking baseline.
 
 ---
 

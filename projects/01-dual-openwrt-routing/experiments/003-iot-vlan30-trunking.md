@@ -197,7 +197,9 @@ uci set firewall.iot_dns.proto='udp'
 uci set firewall.iot_dns.dest_port='53'
 uci set firewall.iot_dns.target='ACCEPT'
 
-# Pinhole rule: Permit MQTT publication to Mosquitto broker
+# Pinhole rule: Permit MQTT publication to Mosquitto broker (Applies when broker is placed across routed zones or routed L3 subnets)
+# Note: For hosts directly sharing Layer-2 vmbr3, intra-subnet east-west traffic does not traverse the router CPU/forward chain.
+# For true same-subnet isolation, Layer-2 client isolation or ebtables/nftables bridge filtering must be enforced at L2.
 uci set firewall.iot_mqtt=rule
 uci set firewall.iot_mqtt.name='Allow-IoT-MQTT-Mosquitto'
 uci set firewall.iot_mqtt.src='ha_iot'
@@ -215,20 +217,24 @@ uci commit firewall
 
 ## 📊 Verification & Security Checklist
 
-| Checkpoint | Test Method | Expected Behavior |
-| :--- | :--- | :--- |
-| **802.11 Association** | Attempt connection with unapproved device | Association rejected at L2 (no IP lease offered) |
-| **MAC Filtering** | Connect ESP32 / ESP8266 | Association succeeds, static IP assigned (`10.30.30.10`) |
-| **Physical Router Isolation** | Ping `192.168.1.1` from ESP | Destination Host Unreachable / Dropped |
-| **Home LAN Isolation** | Ping `192.168.1.197` (PC) from ESP | Request Timed Out / Dropped |
-| **MQTT Connectivity** | ESP publishes MQTT packet to `10.30.30.2:1883` | Connects and publishes successfully |
-| **WAN Isolation** | ESP attempts outbound HTTP/HTTPS ping to internet | Dropped by OpenWrt VM firewall |
+| Checkpoint | Test Method | Expected Behavior | Enforcement Layer |
+| :--- | :--- | :--- | :--- |
+| **802.11 Association** | Attempt connection with unapproved device | Association rejected at L2 (no IP lease offered) | Archer C6 `macfilter 'allow'` |
+| **MAC Filtering** | Connect ESP32 / ESP8266 | Association succeeds, static IP assigned (`10.30.30.10`) | Hostapd / OpenWrt VM Dnsmasq |
+| **Physical Router Isolation** | Ping `192.168.1.1` from ESP | Destination Host Unreachable / Dropped | Archer C6 `br-iot` unassigned L3 IP + firewall isolation |
+| **Home LAN Isolation** | Ping `192.168.1.197` (PC) from ESP | Request Timed Out / Dropped | OpenWrt VM forward drop (`ha_iot` ➔ `homelan`) |
+| **MQTT Connectivity** | ESP publishes MQTT packet to `10.30.30.2:1883` | Connects and publishes successfully | L2 bridge forwarding / TCP 1883 |
+| **WAN Isolation** | ESP attempts outbound HTTP/HTTPS ping to internet | Dropped by OpenWrt VM firewall | OpenWrt VM forward drop (`ha_iot` ➔ `wan`) |
 
 ---
 
 ## 💡 Lessons Learned & Operational Notes
-1. **Zero-IP Bridging on Archer C6:** Setting `proto 'none'` on the physical router's `br-iot` bridge removes the physical router entirely from Layer-3 visibility, guaranteeing that even an attacker executing code on the ESP cannot reach the Archer C6's Dropbear SSH or LuCI web interface.
-2. **Single-Cable Trunk Scalability:** The inter-router physical link cleanly multiplexes:
+1. **Layer-2 vs Layer-3 East-West Isolation Reality:** 
+   - Intra-subnet traffic (e.g. ESP32 at `10.30.30.10` communicating with Mosquitto at `10.30.30.2` on `vmbr3`) travels directly across the Linux bridge switch fabric without hitting OpenWrt's routed `FORWARD` filter chain.
+   - Therefore, OpenWrt firewall rules (`Allow-IoT-MQTT-Mosquitto`) only control inter-zone / routed boundaries, not same-subnet L2 traffic.
+   - East-west isolation among Wi-Fi IoT clients is enforced by Archer C6's `option isolate '1'` on the VAP (preventing Wi-Fi clients from talking directly to other Wi-Fi clients). For strict container-to-container L2 isolation, Proxmox firewall (`ebtables` / `pve-firewall`) or separate subnets/bridges must be utilized.
+2. **Zero-IP Bridging on Archer C6:** Setting `proto 'none'` on the physical router's `br-iot` bridge removes the physical router's IP presence on VLAN 30, preventing microcontrollers from reaching the router's Dropbear SSH or LuCI web interface via that interface. However, cross-interface reachability to other router IPs (like `192.168.1.1`) is additionally prevented by disabling inter-interface routing on the physical router for that bridge.
+3. **Single-Cable Trunk Scalability:** The inter-router physical link cleanly multiplexes:
    - Untagged: Home LAN (`192.168.1.0/24`)
    - VLAN 100: Raw fiber WAN ONU passthrough
    - VLAN 30: Isolated IoT sensor telemetry

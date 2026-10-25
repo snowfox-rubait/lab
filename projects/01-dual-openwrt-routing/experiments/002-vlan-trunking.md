@@ -61,13 +61,13 @@ By exploiting 802.1Q VLAN tagging on the Archer C6's MT7530 switch and Proxmox L
       bridge-stp off
       bridge-fd 0
   ```
-- Hot-plugged `vmbr100` to OpenWrt VM (ID 100) as `net4` (mapped as `eth5` inside the VM).
+- Hot-plugged `vmbr100` to OpenWrt VM (ID 100) as `net4` (mapped sequentially as `eth4` inside the VM).
 
 ### 3. OpenWrt VM (VM 100)
-- Configured standby PPPoE interface `wan_vlan` on `eth5`:
+- Configured standby PPPoE interface `wan_vlan` on `eth4`:
   ```uci
   set network.wan_vlan=interface
-  set network.wan_vlan.device='eth5'
+  set network.wan_vlan.device='eth4'
   set network.wan_vlan.proto='pppoe'
   set network.wan_vlan.username='$PPPOE_SECONDARY_USER'
   set network.wan_vlan.password='$PPPOE_SECONDARY_PASS'
@@ -79,14 +79,26 @@ By exploiting 802.1Q VLAN tagging on the Archer C6's MT7530 switch and Proxmox L
 ---
 
 ## 📊 Observations & Verification
-- Ran `tcpdump -i eth5 -c 5 -e -nn` inside OpenWrt VM:
-  - Captured live Layer-2 ISP broadcast packets and PPPoE discovery frames flowing over the single cable.
+- Ran `tcpdump -i eth4 -c 5 -e -nn` inside OpenWrt VM:
+  - Captured live Layer-2 ISP broadcast packets and PPPoE discovery frames flowing over the single cable into `eth4`.
 - Permanent static lease added for OpenWrt VM on physical router (`bc:24:11:d4:16:9f` ➔ `192.168.1.129`).
 - Created `/usr/bin/wan-mode` script on the physical router to toggle between:
   - **Mode 1:** Physical Router Main.
   - **Mode 2:** OpenWrt VM Main (with 45s self-healing watchdog).
   - **Mode 3:** Dual Active PPPoE over shared ONU.
 - Created local shortcut `~/.local/bin/wan-mode` on workstation PC for instant terminal control.
+
+---
+
+## 🔬 Evidence vs. Verification Scope Matrix
+> [!IMPORTANT]
+> **Distinguishing Observed Transport from Dual-Active PPPoE Routing:**
+> | Acceptance Criterion | Observed Status | Evidence / Notes |
+> | :--- | :--- | :--- |
+> | **1. Layer-2 VLAN 100 Transport** | ✅ **Verified** | `tcpdump -i eth4` on VM captures tagged ISP broadcast & PADI frames across single physical link. |
+> | **2. Independent Mode 1 & 2 Switching** | ✅ **Verified** | Router controls PPPoE activation; `wan-mode` watchdog verifies route and failover safely. |
+> | **3. Simultaneous Dual PPPoE Sessions** | ⚠️ **Conditional / Unverified** | Multiple sessions depend on upstream ISP Bras/ONU policy; tested frame transport, but concurrent active multi-IP sessions require active ISP multi-session authorization. |
+> | **4. Outbound Dual-WAN ECMP / Failover** | ⚠️ **Staged in Project 11** | End-to-end multi-WAN routing and failover are actively developed and documented under Project 11 (`mwan3`). |
 
 ---
 

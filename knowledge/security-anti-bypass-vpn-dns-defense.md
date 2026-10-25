@@ -91,13 +91,16 @@ Mobile VPNs use a combination of standard protocols and HTTP/HTTPS APIs:
 * Full Deep Packet Inspection engines like **Suricata** or **Snort** reconstruct TCP streams and analyze packet payloads to read the cleartext TLS `ClientHello` SNI.
 * Consumer hardware (e.g. MT7621 with 128MB RAM) lacks the memory and processing power to run Suricata with large signature rulesets without bottlenecking throughput.
 
-### Future Proxmox Container Architecture
-* **Target Design:** Host **Suricata** or **Snort** inside a dedicated Proxmox LXC container or inline bridge VM.
-* **Pipeline:**
-  1. Internal traffic routes through the Proxmox inspection bridge before exiting the WAN.
-  2. Suricata inspects TLS SNI in real time.
-  3. If a restricted SNI pattern is matched, Suricata sends a TCP Reset (`RST`) or drops the flow.
-  4. Automation scripts parse Suricata alert logs to dynamically trigger Fail2ban / firewall blacklists.
+### Future Proxmox Inspection Architecture & Enforcement Reality
+* **Deployment Model:** DPI engines require explicit traffic visibility. An isolated container on `vmbr5` cannot see inter-bridge traffic unless traffic is routed directly through it or mirrored to it.
+* **Three Supported Architectural Modes:**
+  1. **Inline IPS Gateway (Active Drop):** Deploy Suricata as a routed bridge/veth gateway directly between the client zones (`vmbr1`, `vmbr3`) and the OpenWrt VM WAN egress. Suricata operates in AF_PACKET or NFQUEUE inline mode, allowing it to drop packets or inject `TCP RST` packets directly into violating streams.
+  2. **Passive TAP / SPAN Sensor (Detection Only):** Proxmox port mirroring mirrors bridge traffic to a Suricata sniffing vNIC on `vmbr5`. Suricata detects signatures and logs alerts, but cannot drop packets inline. Automated response daemons parse alert logs and dispatch API blocks to OpenWrt's nftables firewall.
+  3. **Router-Offloaded Proxy / Flow Accounting:** OpenWrt VM selectively redirects outbound port 80/443 traffic to an HTTP/HTTPS forward proxy for TLS inspection where CA certificates are installed on endpoints.
+* **Protocol & Visibility Boundaries:**
+  - Cleartext TLS `ClientHello` SNI inspection is effective only when TLS 1.3 Encrypted Client Hello (ECH) is not in use.
+  - Blocking DNS HTTPS records (type 65) disrupts automatic ECH negotiation in conforming clients, but cannot prevent direct IP connections or specialized VPN tunnels.
+  - Full packet payload inspection of modern end-to-end encrypted tunnels (WireGuard, OpenVPN, Tor) is limited to traffic fingerprinting, heuristics, and destination IP reputation rather than plaintext inspection.
 
 ---
 

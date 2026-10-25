@@ -8,8 +8,8 @@ maxretry = 3
 banaction = nftables-multiport
 backend = systemd
 
-# Allowlist Workstation PC, Physical Router, and loopback
-ignoreip = 127.0.0.1/8 ::1 192.168.1.197 192.168.1.1 10.0.0.0/8
+# Allowlist Workstation PC, Physical Router, and loopback (explicit trusted endpoints only; no broad subnets)
+ignoreip = 127.0.0.1/8 ::1 192.168.1.197 192.168.1.1
 
 [sshd]
 enabled = true

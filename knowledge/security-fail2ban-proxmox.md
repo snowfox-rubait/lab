@@ -22,8 +22,9 @@ While external internet traffic is terminated at Cloudflare's edge, internal dev
 3. **Allowlisted Hosts (`ignoreip`):**
    - Workstation PC (`192.168.1.197`)
    - Physical Router (`192.168.1.1`)
-   - Local hypervisor loopback (`127.0.0.1/8`)
-   - Safe internal subnets (`10.0.0.0/8`)
+   - Local hypervisor loopback (`127.0.0.1/8`, `::1`)
+   > [!SECURITY]
+   > Notice: Broad subnets (such as `10.0.0.0/8`) are explicitly **excluded** from `ignoreip` to prevent compromised internal containers or lateral pivot attacks from evading brute-force detection. Only explicit, high-trust management endpoints are exempted.
 
 ---
 

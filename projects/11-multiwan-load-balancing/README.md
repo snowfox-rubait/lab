@@ -79,7 +79,7 @@ Append the logical `wan_vm` interface pointing to the OpenWrt VM in `/etc/config
 uci set network.wan_vm=interface
 uci set network.wan_vm.proto='static'
 uci set network.wan_vm.device='br-lan'
-uci set network.wan_vm.ipaddr='192.168.1.1'
+uci set network.wan_vm.ipaddr='192.168.1.254'
 uci set network.wan_vm.netmask='255.255.255.0'
 uci set network.wan_vm.gateway='192.168.1.129'
 uci set network.wan_vm.metric='20'
@@ -87,6 +87,9 @@ uci set network.wan_vm.defaultroute='0'
 uci commit network
 /etc/init.d/network reload
 ```
+> [!NOTE]
+> **Transit Network Topology:**
+> `wan_vm` binds to `br-lan` using dedicated secondary transit address `192.168.1.254/24` (preventing collision with local router IP `192.168.1.1`). Outbound packets steered to `wan_vm` are routed across the inter-router link to VM gateway `192.168.1.129`, where they traverse the VM's NAT and exit via `wan_vlan`. Dedicated policy tables in `mwan3` mark traffic by fwmark, avoiding routing loops or LAN bridge ambiguities.
 
 ### Step 3: Register `wan_vm` in Firewall WAN Zone
 In `/etc/config/firewall`, add `wan_vm` to zone `wan` so masquerade NAT applies to routed outbound packets:

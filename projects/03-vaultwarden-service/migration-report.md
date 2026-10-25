@@ -33,7 +33,7 @@
 - **Why a Dedicated Database Bridge (`vmbr7`)?**  
   To adhere to Zero-Trust and 3-Tier Security Architecture. If an application in `vmbr1` (Safe Internal) or `vmbr2` (Public Ingress) is ever exploited via remote code execution, the attacker is trapped inside an isolated virtual bridge. They cannot sniff database broadcast traffic or access raw storage.
 - **Why Match the Host OS (Debian 13 Trixie)?**  
-  To guarantee 1:1 kernel, libc, systemd, and cgroups v2 parity between the Proxmox host and containers. This eliminates namespace translation overhead and enables Kernel Samepage Merging (KSM) to deduplicate shared memory pages across containers.
+  To maintain user-space package, toolchain, and systemd consistency across the homelab infrastructure. (Note: LXCs natively share the host kernel regardless of container distro; standardized templates simplify package management, maintenance, and opportunistic KSM page scanning when enabled).
 - **Why Enforce TLS Internally Between Containers?**  
   Defense-in-depth. Plaintext HTTP across Linux bridges is vulnerable to ARP spoofing or rogue container promiscuous listening. Forcing TLS across all hops ensures cryptographic confidentiality even inside the hypervisor.
 - **Why Bangladesh-Only Geo-Fencing?**  
