@@ -165,21 +165,39 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def do_POST(self):
         parsed = urllib.parse.urlparse(self.path)
         if parsed.path == "/api/set":
+            # CSRF Mitigation: Enforce application/json Content-Type and validate Origin/Referer
+            content_type = self.headers.get("Content-Type", "")
+            if "application/json" not in content_type:
+                self.send_response(415)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Unsupported Media Type. State-changing requests must be application/json."}).encode())
+                return
+
+            origin = self.headers.get("Origin") or self.headers.get("Referer") or ""
+            # Verify origin matches local LAN controller if present
+            if origin and not any(allowed in origin for allowed in ["192.168.1.130", "127.0.0.1", "localhost"]):
+                self.send_response(403)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Forbidden: Untrusted Origin"}).encode())
+                return
+
             content_length = int(self.headers.get("Content-Length", 0))
+            if content_length > 1024:
+                self.send_response(413)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Payload Too Large"}).encode())
+                return
+
             body = self.rfile.read(content_length).decode() if content_length > 0 else ""
-            
             mode = None
-            # Support JSON payload
             try:
                 data = json.loads(body)
                 mode = str(data.get("mode", ""))
             except Exception:
-                pass
-
-            # Fallback to query parameter or form-encoded
-            if not mode:
-                params = urllib.parse.parse_qs(body or parsed.query)
-                mode = params.get("mode", [""])[0]
+                mode = None
 
             if mode in ["1", "2", "3"]:
                 try:

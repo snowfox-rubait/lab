@@ -1,10 +1,11 @@
 # /etc/config/network addition on Physical Archer C6 for MWAN3 routing table:
 # Creates a logical interface pointing to the OpenWrt VM as WAN 2
+# Uses dedicated static transit IP 192.168.1.254 on br-lan to prevent IP conflicts with 192.168.1.1
 
 config interface 'wan_vm'
 	option proto 'static'
 	option device 'br-lan'
-	option ipaddr '192.168.1.1'
+	option ipaddr '192.168.1.254'
 	option netmask '255.255.255.0'
 	option gateway '192.168.1.129'
 	option metric '20'

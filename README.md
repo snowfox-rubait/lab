@@ -120,7 +120,7 @@ flowchart TD
             subgraph ZoneDB["Dedicated Database Tier - vmbr7<br/>Central Multi-Tenant & Cloud Sync"]
                 direction TB
 
-                Database["Central Multi-Tenant Database<br/>LXC 210 (10.70.70.10)<br/>PostgreSQL 17 & Redis 7<br/>Strict Port 5432 (mTLS / SCRAM)"]
+                Database["Central Multi-Tenant Database<br/>LXC 210 (10.70.70.10)<br/>PostgreSQL 17 & Redis 7<br/>Strict Port 5432 (TLS / SCRAM)"]
                 DBBackup["Central Database Backup Engine<br/>Outbound Cold-Pull: Neon & Supabase<br/>Automated pg_dump to Local Storage"]
 
                 DBBackup -.->|Local Dump Socket| Database

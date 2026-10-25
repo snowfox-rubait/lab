@@ -26,11 +26,16 @@ case "$MODE" in
         (
             echo "[Watchdog] Waiting 45s for OpenWrt VM to establish WAN..."
             sleep 45
-            if ping -c 3 1.1.1.1 >/dev/null 2>&1; then
-                echo "[Watchdog] Internet verified! Mode 2 successful."
+            
+            # Verify VM WAN interface status, route path, and ping reachability
+            VM_UP=$(ssh -y -i /root/.ssh/id_dropbear root@192.168.1.129 "ifstatus wan_vlan | grep -o '\"up\": true'" 2>/dev/null || echo "")
+            DEFAULT_VIA_VM=$(ip route | grep "default via 192.168.1.129" || true)
+
+            if [ -n "$VM_UP" ] && ping -c 3 1.1.1.1 >/dev/null 2>&1; then
+                echo "[Watchdog] Internet & VM route verified (wan_vlan: up)! Mode 2 successful."
                 rm -f /tmp/network.mode1.bak
             else
-                echo "[Watchdog] WAN failed in Mode 2! Auto-reverting to Mode 1..."
+                echo "[Watchdog] WAN or route verification failed in Mode 2! Auto-reverting to Mode 1..."
                 ssh -y -i /root/.ssh/id_dropbear root@192.168.1.129 "ifdown wan_vlan" 2>/dev/null || true
                 cp /tmp/network.mode1.bak /etc/config/network
                 /etc/init.d/network reload

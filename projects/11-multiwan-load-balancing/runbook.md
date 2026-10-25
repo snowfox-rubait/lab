@@ -30,11 +30,11 @@ ssh root@192.168.1.1 "apk update && apk add mwan3"
 ### Phase 2: Add Secondary WAN Interface to Network & Firewall
 On the physical router:
 ```sh
-# Create logical uplink pointing to VM 100
+# Create logical uplink pointing to VM 100 with dedicated secondary IP (avoids conflict with 192.168.1.1)
 uci set network.wan_vm=interface
 uci set network.wan_vm.proto='static'
 uci set network.wan_vm.device='br-lan'
-uci set network.wan_vm.ipaddr='192.168.1.1'
+uci set network.wan_vm.ipaddr='192.168.1.254'
 uci set network.wan_vm.netmask='255.255.255.0'
 uci set network.wan_vm.gateway='192.168.1.129'
 uci set network.wan_vm.metric='20'

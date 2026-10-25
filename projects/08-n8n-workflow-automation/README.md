@@ -46,60 +46,65 @@ n8n serves as the homelab's central automation engine. Instead of scattering har
 
 ---
 
-## 🛡️ 3. Featured Pipeline: Vaultwarden Breach Monitor & Auto-Remediation
+## 🛡️ 3. Featured Pipeline: Vaultwarden Breach Monitor, Alert & Assisted Triage Flow
 
-### 3.1 The Concept
-An autonomous security watchdog that:
-1. Audits stored credentials against the **Have I Been Pwned (HIBP)** breach database every 10 minutes.
-2. Immediately alerts the administrator via **Telegram** when a breach or compromised credential is detected.
-3. Automatically rotates and updates the compromised credential with a cryptographically strong newly generated passphrase in Vaultwarden.
-4. Preserves the prior password in Vaultwarden's native password history so the user can authenticate into the affected service.
-5. Sends an interactive Telegram message containing:
-   - Name of the compromised account and username/email.
-   - Direct recovery URL (resolving standard `/.well-known/change-password` or stored login URI).
-   - Guidance requiring manual rotation of non-automatable factors (Passkeys/FIDO2, TOTP authenticator keys).
-6. **Cascades Workstation Malware Inspection (Project 10):** Dispatches a webhook to the Main PC's local security stack (`projects/10-workstation-av-edr-stack`) to trigger an immediate background ClamAV/YARA memory and browser-storage audit to verify that the breach did not originate from a local info-stealer Trojan.
+### 3.1 The Concept & Safety Boundaries
+An autonomous security watchdog designed to detect credential compromise and assist immediate human remediation:
+1. **Periodic Exposure Audit:** Audits stored credentials against the **Have I Been Pwned (HIBP)** breach database using $k$-anonymity SHA-1 hash prefixes (zero plaintext passwords sent to external APIs).
+2. **Instant High-Priority Alert:** When a compromised password is confirmed, n8n immediately dispatches an urgent incident alert via **Telegram Bot Hub** (`projects/09-telegram-bot-hub`).
+3. **Suggested Strong Passphrase Generation:** n8n pre-generates a cryptographically strong, high-entropy 5-word passphrase suggestion and includes it directly in the incident card.
+4. **Direct Change-Password Link:** Resolves W3C standard `/.well-known/change-password` from the vault item's URI so the administrator can jump directly to the remote provider's reset page.
+5. **No Blind Vault Overwriting (Human-Verified Rotation):**
+   > [!CRITICAL]
+   > **Why Blind Auto-Overwriting Vaultwarden is Unsafe:**  
+   > Changing a password inside a local Vaultwarden database does *not* rotate the password at the remote service (e.g. Google, GitHub, banks). Overwriting the stored password automatically would lock the user out of the remote service while leaving the breached password active on the remote endpoint.  
+   > Therefore, Vaultwarden records are updated **only after** the administrator completes the remote password change, or via two-stage confirmation.
+6. **Workstation Malware Cascade (Project 10):** Dispatches an authenticated webhook to the Main PC's endpoint defense stack (`projects/10-workstation-av-edr-stack`) to trigger an immediate background ClamAV/YARA memory and browser-storage audit to verify that the breach did not originate from a local info-stealer Trojan.
 
 ### 3.2 Technical Feasibility Analysis
 
 | Automation Step | Feasibility | Technical Mechanism |
 | :--- | :--- | :--- |
-| **Periodic Breach Check** | ✅ **100% Feasible** | Runs `bw report password-health` via Bitwarden CLI or calls HIBP API directly using $k$-anonymity SHA-1 prefixes. |
+| **Periodic Breach Check** | ✅ **100% Feasible** | Queries HIBP API via $k$-anonymity (first 5 chars of SHA-1 hash) or uses Bitwarden CLI vault exports. |
 | **Instant Telegram Alert** | ✅ **100% Feasible** | Uses n8n Telegram Node with inline keyboard action buttons for recovery links. |
-| **Auto-Generate New Password** | ✅ **100% Feasible** | `bw generate --passphrase --words 5 --separator "-"` or built-in n8n Crypto module. |
-| **Update Vault Record & Save** | ✅ **100% Feasible** | `bw get item <id>` ➔ update `.login.password` ➔ `bw encode` ➔ `bw edit item <id>`. |
-| **Preserve Password History** | ✅ **Native Bitwarden Feature** | When a password field is overwritten via `bw edit item`, Vaultwarden automatically appends the previous password to `.passwordHistory` with timestamps. |
-| **Change Password URL Extraction** | ✅ **100% Feasible** | Bitwarden Login items store `uri`. The pipeline extracts the domain and appends standard `/.well-known/change-password` (W3C standard), falling back to the login URI. |
-| **Automated Passkey/TOTP Rotation** | ⚠️ **Intentionally Manual** | Cryptographic design of WebAuthn/FIDO2 passkeys requires local hardware-bound public-key registration in the user's browser; cannot be blindly rotated without interactive browser session. |
+| **Pre-Generate Replacement Passphrase** | ✅ **100% Feasible** | Built-in n8n Crypto module generates high-entropy 5-word Diceware passphrase. |
+| **Change Password URL Extraction** | ✅ **100% Feasible** | Parses domain from item URI and appends standard `/.well-known/change-password` (W3C standard), falling back to root login URL. |
+| **Remote Service Password Rotation** | ⚠️ **Human / Service API Bound** | Executed by user via direct link, or via dedicated provider APIs where supported. |
+| **Post-Verification Vault Update** | ✅ **100% Feasible** | Upon user confirmation callback, `bw edit item <id>` updates vault, natively preserving old password in `.passwordHistory`. |
+| **Automated Passkey/TOTP Rotation** | ⚠️ **Intentionally Manual** | Cryptographic design of WebAuthn/FIDO2 passkeys requires local hardware-bound public-key registration in the user's browser. |
 
 ### 3.3 n8n Workflow Architecture
 
 ```
-[ Cron Trigger: Every 10 min ]
+[ Cron Trigger: Every 15 min ]
                │
                ▼
-[ Bitwarden CLI / Vault Health Audit ]
-  Command: bw report password-health
+[ HIBP k-Anonymity Hash Audit ]
+  Queries range API (5-char SHA-1 prefix)
                │
                ▼
-[ Filter: exposedCount > 0 && !tag.includes('acknowledged') ]
+[ Filter: exposedCount > 0 && !acknowledged ]
                │
-               ├── (Breach Detected)
+               ├── (Breach Confirmed)
                ▼
-[ 1. Generate High-Entropy Passphrase ]
-  (e.g., 5-word random passphrase)
-               │
-               ▼
-[ 2. Update Vaultwarden Item via CLI ]
-  Overwrites item password (pushes old to history)
+[ 1. Generate High-Entropy Suggested Passphrase ]
+  (Cryptographically secure 5-word Diceware passphrase)
                │
                ▼
-[ 3. Construct Recovery URL ]
+[ 2. Construct Direct Reset URL ]
   Resolves https://<domain>/.well-known/change-password
                │
                ▼
-[ 4. Dispatch Interactive Telegram Alert ]
-  Sends markdown card + direct "Open Change Password Page" button
+[ 3. Dispatch Interactive Telegram Alert ]
+  Sends incident card with:
+  - Account name & username
+  - Direct "Change Password" button
+  - Copyable suggested replacement passphrase
+  - Interactive callback [ ✅ Mark Rotated & Update Vault ]
+               │
+               ▼ (Cascade Trigger)
+[ 4. Dispatch Webhook to Workstation EDR (Project 10) ]
+  Triggers host info-stealer scan on Admin Workstation
 ```
 
 ---

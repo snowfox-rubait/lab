@@ -30,7 +30,7 @@ Every single segment of network transit across physical cables, Proxmox Linux br
         ▼
 [ LXC 202: nginx-public (vmbr2: 10.20.20.10) ]
         │
-   Internal HTTPS (TLS 1.3 / mTLS verified via Homelab Root CA)
+   Internal HTTPS (TLS 1.3 server-verified via Homelab Root CA)
         │
         ▼
 [ LXC 220: vaultwarden (vmbr2: 10.20.20.11) ]
@@ -58,6 +58,11 @@ A dedicated internal Certificate Authority was established on the secure Proxmox
    - Subject: `CN=10.70.70.10, DNS:postgres.lab`
    - Enforced in `postgresql.conf`: `ssl = on`.
    - Enforced in `pg_hba.conf`: `hostssl` rule requiring encrypted connections for all tenant roles.
+   - Client Connection Security: Vaultwarden connects with `sslmode=require`. Future migration target is `sslmode=verify-full` with `sslrootcert=/etc/ssl/certs/ca-certificates.crt` for complete cryptographic CA and hostname validation.
+
+4. **Edge Tunnel & WebSocket Scope Nuances:**
+   - **Edge Ingress:** Handled by Cloudflare Tunnel over encrypted QUIC transport directly to the `cloudflared` daemon in LXC 202. This avoids exposing any public router ports.
+   - **Notifications Hub (`:3012`):** Vaultwarden's WebSocket notification service (`location /notifications/hub`) connects over internal HTTP on port 3012 within the isolated `vmbr2` bridge. While isolated from other bridges and public networks, clients must recognize this hop as trusted private L2 rather than TLS-encrypted.
    - Client enforcement: `DATABASE_URL=...&sslmode=require`.
 
 ---

@@ -23,27 +23,33 @@ Vaultwarden is our self-hosted, Bitwarden-compatible password manager. Because i
        ▼ (HTTPS / TLS 1.3)
 [ Cloudflare Edge (vault.snowfox.live) ]
        │
-       ├── WAF Rule: If path starts with "/admin" ➔ BLOCK
+       ├── WAF Rule 1: If ip.geoip.country ne "BD" ➔ BLOCK
+       ├── WAF Rule 2: If path starts with "/admin" ➔ BLOCK (403/Drop)
        │
        ▼ (Encrypted QUIC Tunnel)
-[ cloudflared Daemon (10.20.20.10) ]
+[ cloudflared Daemon in LXC 202 (10.20.20.10) ]
        │
-       ▼ (Local Bridge / Origin CA SSL Full Strict)
+       ▼ (Local Host Bridge / Loopback Socket)
 [ Hardened Nginx Reverse Proxy (10.20.20.10 - nginx-public) ]
        │
-       ├── Public Server Block:
-       │     location /admin { return 404; }
-       │     location / { proxy_pass https://10.20.20.11:8443; } # E2EE mTLS
-       │     Inject Security Headers (HSTS, CSP with wasm-unsafe-eval, X-Frame-Options: DENY)
-       │     proxy_set_header X-Forwarded-Proto https;
-       │     proxy_set_header X-Forwarded-Ssl on;
+       ├── location /admin { 
+       │       allow 192.168.1.197;    # Admin Workstation
+       │       allow 10.10.10.0/24;     # Safe Management Zone
+       │       deny all;                # Returns 403 Forbidden to any tunnel/untrusted IP
+       │       proxy_pass https://10.20.20.11:8443;
+       │   }
        │
-[ Internal LAN Ingress (Workstation / Safe Zone Only) ]
+       ├── location /notifications/hub {
+       │       proxy_pass http://10.20.20.11:3012; # Isolated L2 WebSocket hub
+       │   }
        │
-       ▼ (Private Management Server Block - Port 8443)
-       ├── location /admin { allow 192.168.1.197; allow 10.10.10.0/24; deny all; proxy_pass ...; }
+       ├── location / { 
+       │       proxy_pass https://10.20.20.11:8443; # Server-Verified TLS
+       │       proxy_set_header X-Forwarded-Proto https;
+       │       proxy_set_header X-Forwarded-Ssl on;
+       │   }
        │
-       ▼ (Encrypted HTTPS - Internal Homelab Root CA)
+       ▼ (Encrypted HTTPS via Homelab Root CA)
 [ Vaultwarden Container (10.20.20.11:8443 - ROCKET_TLS) ]
 ```
 
