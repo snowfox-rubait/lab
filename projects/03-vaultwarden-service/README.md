@@ -3,7 +3,8 @@
 > **Project:** `03-vaultwarden-service`  
 > **Hostname:** `vault.snowfox.live`  
 > **Network Zone:** Safe Public Ingress (`vmbr2`, `10.20.20.0/24`)  
-> **Security Posture:** Zero-Trust Ingress, Hardened Admin Isolation, Pay-to-Invite Onboarding Flow
+> **Security Posture:** Zero-Trust Ingress, Hardened Admin Isolation, Storage Quotas Enforced, Pay-to-Invite Onboarding Flow  
+> **Active Production State:** 🟢 3 Active Users | Signups Disabled (`SIGNUPS_ALLOWED=false`) | Storage Hardened | 135 Organized Ciphers
 
 ---
 
@@ -123,15 +124,21 @@ add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-
 
 ## 💰 Monetized Onboarding Flow (bKash / Nagad / Rocket)
 
-### 1. Vaultwarden Core Configuration
+### 1. Vaultwarden Core Configuration & Storage Hardening
 ```env
-# Prevent open unauthenticated registrations
+# Registration & Invitation Policy
 SIGNUPS_ALLOWED=false
-
-# Allow authorized invitations with cryptographic tokens
 INVITATIONS_ALLOWED=true
 
-# Enforce secure authentication
+# Storage Quotas & Upload Constraints (Protects Proxmox ZFS & SSD from abuse)
+ATTACHMENT_SIZE_LIMIT=10240      # 10 MB maximum per individual attachment file
+USER_ATTACHMENT_LIMIT=102400     # 100 MB cumulative attachment storage quota per user
+SENDS_ALLOWED=true               # Allow ephemeral zero-knowledge Bitwarden Send
+USER_SEND_LIMIT=51200            # 50 MB cumulative send transfer limit per user
+
+# Enforce secure authentication & WebSocket
+DOMAIN=https://vault.snowfox.live
+WEBSOCKET_ENABLED=true
 SHOW_PASSWORD_HINT=false
 PASSWORD_ITERATIONS=600000
 ```
@@ -192,6 +199,11 @@ Beyond basic password storage, Vaultwarden unlocks the full suite of enterprise-
 ### 5. Native Two-Factor Authentication & Passkey (FIDO2) Storage
 - **Built-in TOTP Authenticator:** Generates time-based 6-digit verification codes natively in the browser extension and mobile apps.
 - **Passkey / WebAuthn Storage:** Stores public/private keypairs for passkey-enabled websites directly within vault records.
+
+### 6. Native SSH Key Management & Vault Structure
+- **Dedicated Type 5 SSH Key Ciphers:** Stores full private keys, public keys, and cryptographic fingerprints (`SHA256:...`) directly within Bitwarden's native SSH Key format.
+- **Node-Wide Homelab Coverage:** Public/private keys for PC, Proxmox hypervisor, OpenWrt routers, mobile phone (Termux), and client configurations (`~/.ssh/config` and `authorized_keys`) are securely archived.
+- **Canonical 8-Folder Taxonomy:** The production vault is deduplicated and organized into 8 strict folders (`Developer & Cloud`, `Finance & Banking`, `Google Accounts`, `Homelab & Infrastructure`, `Personal & Identity`, `Security & Recovery Keys`, `Services & Social`, `Work & Domains`).
 
 ---
 

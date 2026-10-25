@@ -121,3 +121,25 @@
 - **Admin Protection:** `curl -I https://vault.snowfox.live/admin` $\rightarrow$ **`HTTP/2 403 Forbidden`**
 - **Strict Transport Security:** `Strict-Transport-Security: max-age=31536000` active.
 - **Local Workstation Docker:** Stopped (`vaultwarden` and `vaultwarden_caddy` offline).
+
+---
+
+## 🛡️ Post-Migration Hardening, User Onboarding & Vault Hygiene (2026-10-25)
+
+1. **Active Multi-User Production Base:**
+   - **Active Users (3):** The instance currently hosts 3 active accounts in production (`Snowfox` [Owner] plus 2 verified onboarded users).
+   - **Legacy Stub Purged:** Purged stale uninitialized database record (`mijanur200700@gmail.com`) from PostgreSQL to maintain strict account hygiene.
+2. **Public Signup Lockdown:**
+   - **Policy:** `SIGNUPS_ALLOWED=false` strictly enforced in LXC 220 container environment.
+   - **Verification:** Live public registration requests return `400 Bad Request` ("Registration not allowed"). Account creation requires direct administrator intervention or tokenized invitation.
+3. **Storage Quota & Upload Constraints:**
+   - Hardened container environment variables against storage abuse and disk exhaustion:
+     - `ATTACHMENT_SIZE_LIMIT=10240` (10 MB single file upload cap)
+     - `USER_ATTACHMENT_LIMIT=102400` (100 MB per-user attachment quota)
+     - `SENDS_ALLOWED=true` & `USER_SEND_LIMIT=51200` (50 MB Bitwarden Send transfer cap)
+4. **Vault Organization & Deduplication:**
+   - Merged duplicate credit cards and redundant multi-domain web logins into single canonical entries with multiple URIs.
+   - Categorized all ciphers into 8 canonical folders (`Developer & Cloud`, `Finance & Banking`, `Google Accounts`, `Homelab & Infrastructure`, `Personal & Identity`, `Security & Recovery Keys`, `Services & Social`, `Work & Domains`).
+5. **Native Bitwarden SSH Key Deployment:**
+   - Integrated native Bitwarden Type 5 (`SshKey`) ciphers storing public/private keys and cryptographic fingerprints.
+   - Preserved infrastructure keys across nodes: Main PC keys (`id_rsa_gemini_codeberg`, `id_ed25519`, `id_rsa`, `id_rsa_legacy`), Proxmox root cluster key, Archer C6 router Dropbear client and host keys, OpenWrt VM host key, mobile phone and laptop public keys, and workstation `~/.ssh/config` client mappings in `📁 Security & Recovery Keys`.
