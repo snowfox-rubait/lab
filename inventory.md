@@ -83,7 +83,7 @@ The HP EliteDesk Mini PC currently runs several local services:
 | :--- | :--- | :--- | :--- |
 | **Proxmox Laptop (Built-in LAN `enp12s0`)** | `MAC_PROXMOX_BUILTIN` | `192.168.1.2` | Primary Wake-on-LAN target |
 | **Proxmox Legacy Lease (`eno1`)** | `MAC_PROXMOX_LEGACY` | `192.168.1.2` | Former static lease in `/etc/config/dhcp` |
-| **Proxmox USB Adapter (`eth4`)** | `MAC_PROXMOX_USB` | Dynamic / WAN | USB-Ethernet swing WAN |
+| **Proxmox USB Adapter (USB passthrough / `eth6`)** | `MAC_PROXMOX_USB` | Dynamic / WAN | Former USB-Ethernet swing WAN (hotplugged `eth6` / replaced by VLAN 100 trunk `eth4`) |
 | **ThinkPad Wi-Fi (`wlp3s0`)** | `MAC_PROXMOX_WIFI` | `192.168.1.153` | Internal wireless card (standby) |
 | **Main Workstation PC** | `MAC_MAIN_PC` | `192.168.1.197` | HP EliteDesk Mini PC (Allowlisted) |
 | **User Mobile Phone (`realme-P1-5G`)** | `MAC_PHONE` | `192.168.1.185` | Primary mobile device (Allowlisted) |

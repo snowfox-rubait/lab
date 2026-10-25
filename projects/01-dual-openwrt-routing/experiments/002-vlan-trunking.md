@@ -23,7 +23,7 @@ Eliminate all physical cable swapping when switching between the physical Archer
 By exploiting 802.1Q VLAN tagging on the Archer C6's MT7530 switch and Proxmox Linux bridges:
 1. The physical WAN port can be bridged into a tagged VLAN 100 on the router's `lan3` port.
 2. The single cable between router and laptop carries both untagged Home LAN (VLAN 1) and tagged raw ONU traffic (VLAN 100).
-3. The Proxmox host can break out VLAN 100 (`vmbr100`) directly into the OpenWrt VM's virtual NIC (`eth5`).
+3. The Proxmox host can break out VLAN 100 (`vmbr100`) directly into the OpenWrt VM's virtual NIC (`net4` / `eth4`).
 4. Both routers will be in the same Layer-2 broadcast domain as the ISP's PPPoE Concentrator.
 
 ---
