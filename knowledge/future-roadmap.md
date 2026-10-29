@@ -41,6 +41,13 @@
   - **Kiwix:** Self-hosted offline Wikipedia, StackOverflow, and medical wikis stored in compressed `.zim` format.
 - **Documentation & Notes:**
   - **BookStack:** Structured hierarchical documentation system (Books > Chapters > Pages).
+  - **AtelierDocs:** Self-hosted documentation and document template management system.
+- **PDF Manipulation & Processing:**
+  - **Stirling-PDF:** Powerful, locally hosted one-stop PDF tool (merge, split, OCR, convert, watermark, redact, sign).
+  - **BentoPDF:** Privacy-first, lightweight client-side browser PDF toolkit (runs locally in browser without server processing overhead).
+- **Developer & IT Utilities:**
+  - **IT-Tools:** Ultralight Swiss Army knife collection of handy online developer & sysadmin utilities (token generators, converters, encoders, regex testers, cheatsheets).
+  - **OmniTools:** Self-hosted developer multi-tool suite (formatters, parsers, converters, code generators).
 
 ---
 
@@ -99,6 +106,11 @@ The baseline infrastructure is live under [[../projects/07-pihole-dns-sinkhole/R
 | **File Browser / NAS** | Debian 13 LXC + Disk Passthrough| Safe Internal (`vmbr1`) | Low |
 | **Kiwix (Offline ZIM)** | Debian 13 LXC | Safe Internal (`vmbr1`) | Low |
 | **BookStack** | Debian 13 LXC | Safe Internal (`vmbr1`) | Low |
+| **AtelierDocs** | Docker / Node LXC | Safe Internal (`vmbr1`) | Low |
+| **Stirling-PDF** | Docker in Debian 13 LXC | Safe Internal (`vmbr1`) | Low |
+| **BentoPDF** | Static Web / Docker LXC | Safe Internal (`vmbr1`) | Low |
+| **IT-Tools** | Docker in Debian 13 LXC | Safe Internal (`vmbr1`) | Low |
+| **OmniTools** | Docker in Debian 13 LXC | Safe Internal (`vmbr1`) | Low |
 | **Headscale** | *Undecided / Separated* | *Deferred (Out of current scope)* | Medium |
 | **Home Assistant Core** | Dedicated Proxmox VM / LXC | Home Assistant & IoT (`vmbr3`) | Medium |
 | **MQTT Broker (Mosquitto)**| Debian 13 LXC | Home Assistant & IoT (`vmbr3`) | Low |
