@@ -5,6 +5,20 @@
 **/*.env
 .env.*
 !.env.example
+*.tfvars
+!*.tfvars.example
+
+# Terraform local state and modules
+.terraform/
+**/.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
 
 # Temporary and local runtime files
 *.bak
@@ -13,3 +27,4 @@
 /tmp/
 .DS_Store
 Thumbs.db
+
