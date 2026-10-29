@@ -1,0 +1,14 @@
+{
+  "name": "snowfox-shortener-worker",
+  "version": "1.0.0",
+  "description": "Cloudflare Worker edge redirector with Bangladesh geo-fencing for short.snowfox.live",
+  "main": "worker.js",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail"
+  },
+  "devDependencies": {
+    "wrangler": "^3.80.0"
+  }
+}

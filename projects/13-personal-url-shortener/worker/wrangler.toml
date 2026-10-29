@@ -1,0 +1,22 @@
+name = "snowfox-shortener"
+main = "worker.js"
+compatibility_date = "2024-10-01"
+
+# Route binding for custom domain
+routes = [
+  { pattern = "short.snowfox.live/*", zone_name = "snowfox.live" }
+]
+
+# KV Namespace binding for link persistence
+# Run: npx wrangler kv namespace create SHORT_LINKS
+# Then replace the id below with your generated namespace id.
+[[kv_namespaces]]
+binding = "SHORT_LINKS"
+id = "YOUR_KV_NAMESPACE_ID"
+
+[vars]
+# You can set non-sensitive configuration here
+DEFAULT_FALLBACK_URL = "https://snowfox.live"
+
+# Store the master secret token as an encrypted Cloudflare secret:
+# Run: npx wrangler secret put SHORTENER_SECRET_TOKEN

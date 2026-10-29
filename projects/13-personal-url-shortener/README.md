@@ -210,19 +210,38 @@ export default {
 
 ---
 
-## 📋 6. Phased Implementation Plan
+## 📋 6. Implementation Artifacts & Deployment Status
 
-- [ ] **Phase 1: Cloudflare DNS & Worker Scaffolding**
-  - Add DNS record for `short.snowfox.live` in Cloudflare (Proxied `Orange Cloud`).
-  - Configure Cloudflare WAF rule restricting `short.snowfox.live` strictly to Bangladesh (`BD`).
-  - Deploy edge worker script with KV namespace `SHORT_LINKS`.
-- [ ] **Phase 2: Management Web UI Development (`short-manager`)**
-  - Build 2-page lightweight Python FastAPI web service (Page 1: Link Generator, Page 2: Link List Registry).
-  - Test outbound Cloudflare KV API communication over `vmbr1`.
-- [ ] **Phase 3: Proxmox LXC Deployment & Internal DNS**
-  - Deploy container on Proxmox host inside `vmbr1` (`10.10.10.35`).
-  - Add internal FQDN `short.internal.lab` into Pi-hole / OpenWrt `dnsmasq` local records.
-- [ ] **Phase 4: End-to-End Verification**
-  - Verify link generation from internal UI.
-  - Test public resolution inside Bangladesh (`200 OK / 302 Redirect`).
-  - Test external IP resolution via international VPN to confirm `403 Forbidden` geo-block.
+### Implemented Files:
+- **Cloudflare Edge Worker:**
+  - Script: [`worker/worker.js`](worker/worker.js) (BD geo-fencing + KV redirect + token API)
+  - Wrangler Config: [`worker/wrangler.toml`](worker/wrangler.toml) (KV bindings and routing)
+  - Deployment Helper: [`worker/setup.sh`](worker/setup.sh)
+- **Safe Internal Web UI (`vmbr1`):**
+  - Application Daemon: [`manager/app.py`](manager/app.py) (Zero-dependency Python 3 HTTP server + SPA frontend)
+  - Service Configuration: [`manager/short-manager.service`](manager/short-manager.service)
+  - Environment Template: [`manager/.env.example`](manager/.env.example)
+  - Automated LXC Installer: [`manager/install.sh`](manager/install.sh)
+- **Infrastructure as Code (pyinfra):**
+  - Task Module: [`iac/tasks/short_manager.py`](../../iac/tasks/short_manager.py)
+  - Fleet Inventory: [`iac/inventory.py`](../../iac/inventory.py)
+
+---
+
+## 🚀 7. Deployment Roadmap & Next Steps
+
+- [x] **Phase 1: Edge Redirection Engine & API**
+  - Scaffolded [`worker/worker.js`](worker/worker.js) with Bangladesh geo-fence, KV CRUD endpoints, and `setup.sh`.
+- [x] **Phase 2: Private 2-Page Web Management Application**
+  - Developed zero-dependency [`manager/app.py`](manager/app.py) (Page 1: Link Generator with copy output, Page 2: Link Registry table with live search and deletion).
+- [ ] **Phase 3: Deploy Worker & KV to Cloudflare**
+  - Run `worker/setup.sh` to generate KV namespace `SHORT_LINKS` and set `SHORTENER_SECRET_TOKEN`.
+  - Add Cloudflare WAF rule restricting `short.snowfox.live` to Bangladesh (`BD`).
+- [ ] **Phase 4: Proxmox LXC Container Provisioning (`vmbr1`)**
+  - Launch Debian 13 LXC 225 on `vmbr1` (`10.10.10.35`).
+  - Run `manager/install.sh` or execute pyinfra playbook `pyinfra iac/inventory.py iac/tasks/short_manager.py`.
+  - Map `10.10.10.35 short.internal.lab` in local OpenWrt `dnsmasq` / Pi-hole.
+- [ ] **Phase 5: Verification & Geo-Fence Audit**
+  - Test link creation from internal web UI (`http://short.internal.lab:8080`).
+  - Verify public 302 redirection from Bangladesh IP.
+  - Verify 403 Forbidden rejection when queried from outside Bangladesh (via foreign VPN).

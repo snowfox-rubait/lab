@@ -115,3 +115,17 @@ vaultwarden = [
         },
     )
 ]
+
+# Personal URL Shortener Admin Manager (LXC 225 on vmbr1)
+short_manager = [
+    (
+        "10.10.10.35",
+        {
+            "ssh_user": "root",
+            "ssh_key": "~/.ssh/id_rsa_gemini_codeberg",
+            "hostname": "short.internal.lab",
+            "role": "url_shortener_manager",
+            "os_family": "debian",
+        },
+    )
+]
