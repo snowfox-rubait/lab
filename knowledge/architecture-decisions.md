@@ -496,3 +496,104 @@ In this model:
 3. **Automated Certificate Lifecycle:**
    - Deploy `certbot` / `acme.sh` with `dns-cloudflare` plugin inside `nginx-safe` (`10.10.10.10`) running bi-monthly cron renewal and Nginx reload hooks.
 
+---
+
+### 4. Production Deployment & Live Status (Verified)
+
+- **Date Live:** 2026-10-29
+- **Status:** 🟢 **PRODUCTION VERIFIED & ACTIVE**
+- **Public CA Issuer:** `Let's Encrypt (YR1 / Let's Encrypt Authority)`
+- **Valid Through:** 2027-01-27
+- **IaC Automation:** [`iac/terraform/acme-wildcard`](../iac/terraform/acme-wildcard)
+
+#### Live Verified Internal Endpoints (Zero Warnings):
+| Service | Internal Domain | Destination Target | Bridge Zone | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| **Proxmox Hypervisor** | `https://pve.snowfox.live` | `192.168.1.2:8006` | `vmbr0` (Physical LAN) | 🟢 200 OK (TLS 1.3) |
+| **OpenWrt LuCI** | `https://router.snowfox.live` | `https://192.168.1.1:443` | `vmbr0` (Physical LAN) | 🟢 200 OK (TLS 1.3) |
+| **Pi-hole OOB** | `https://pihole.snowfox.live` | `http://192.168.1.135:80/admin/` | `vmbr0` (Physical LAN) | 🟢 200 OK (TLS 1.3) |
+| **WAN Controller** | `https://wan.snowfox.live` | `http://192.168.1.130:80` | `vmbr0` (Physical LAN) | 🟢 200 OK (TLS 1.3) |
+| **Short Link Manager** | `https://short-admin.snowfox.live`| `http://10.10.10.35:8080` | `vmbr1` (Safe Internal) | 🟢 200 OK (TLS 1.3) |
+
+---
+
+### 5. Engineering Post-Mortem: What, How, Why, Failures & Solves
+
+#### A. The "What, How, and Why" Summary
+- **What:** Replaced raw IP/port homelab access with branded Split-Horizon DNS (`*.snowfox.live` $\rightarrow$ `10.10.10.10`) fronted by a hardened Nginx reverse proxy serving a genuine Let's Encrypt Wildcard TLS certificate.
+- **How:** Local DNS engines (OpenWrt `dnsmasq` and Pi-hole v6) answer authoritatively for `*.snowfox.live` inside the home network, while Cloudflare public DNS returns `NXDOMAIN`. TLS certificates are requested and renewed automatically via DNS-01 API challenges (Cloudflare TXT records), streaming the certificate into LXC 201 via Terraform.
+- **Why:** Delivers standard port 443 HTTPS and trusted green padlocks across all client devices (laptops, phones, tablets) without opening public router ports, without exposing topology to public scanners, and without triggering browser security warnings.
+
+---
+
+#### B. Failures Encountered & Engineering Solutions
+
+#### 1. Failure: Asymmetric TCP Drops on Shared Subnet (`192.168.1.0/24`)
+- **Symptoms:** Pings from workstation Wi-Fi (`192.168.1.197`) to `10.10.10.10` succeeded, but HTTP/HTTPS connections timed out during the TCP handshake.
+- **Root Cause:** Asymmetric Layer 2 routing. The workstation sent `TCP SYN` to the default gateway router (`192.168.1.1`), which forwarded the packet to the OpenWrt VM router (`192.168.1.129`). The OpenWrt VM routed the packet to LXC 201 (`10.10.10.10`) on `vmbr1`. When LXC 201 replied, OpenWrt VM's return path to `192.168.1.197` bypassed the physical router and went directly to the workstation's Wi-Fi MAC over Layer 2 broadcast domain. Because the physical router never saw the `SYN-ACK`, its conntrack engine flagged the workstation's subsequent `ACK` / data packets as out-of-state and dropped them.
+- **Engineering Solution:** Deployed a persistent nftables masquerade rule on the physical router in `/etc/nftables.d/20-proxmox-zones-masq.nft`:
+  ```nftables
+  chain srcnat_proxmox {
+      type nat hook postrouting priority 100; policy accept;
+      ip daddr 10.0.0.0/8 oifname "br-lan" masquerade
+  }
+  ```
+  This forces traffic traversing the router toward `10.0.0.0/8` to be SNAT'd to the router's IP, guaranteeing symmetric bidirectional flow through conntrack.
+
+---
+
+#### 2. Failure: RFC 3442 DHCP Option 121 Wiping Out Workstation Default Route
+- **Symptoms:** When advertising static routes to `10.0.0.0/8` via DHCP Option 121 (`121,10.0.0.0/8,192.168.1.129`), client devices immediately lost general internet connectivity.
+- **Root Cause:** RFC 3442 strictly specifies that if a DHCP client accepts Option 121 (Classless Static Routes), **it MUST ignore DHCP Option 3 (Default Router Gateway)**. Because Option 121 only defined `10.0.0.0/8`, the operating system cleared `0.0.0.0/0 via 192.168.1.1`.
+- **Engineering Solution:** Bundled the default route `0.0.0.0/0` directly into Option 121 and Option 249:
+  ```bash
+  uci set dhcp.lan.dhcp_option='121,0.0.0.0/0,192.168.1.1,10.0.0.0/8,192.168.1.129'
+  uci add_list dhcp.lan.dhcp_option='249,0.0.0.0/0,192.168.1.1,10.0.0.0/8,192.168.1.129'
+  uci commit dhcp && /etc/init.d/dnsmasq reload
+  ```
+  Workstations maintain full internet access while dynamically learning the sub-millisecond route to internal Proxmox zones.
+
+---
+
+#### 3. Failure: Pi-hole v6 Drop-In Configs Not Parsed
+- **Symptoms:** Split DNS worked when querying OpenWrt (`192.168.1.1`), but failed when querying Pi-hole (`192.168.1.135`).
+- **Root Cause:** Pi-hole v6 introduced an embedded configuration engine (`/etc/pihole/pihole.toml`) that defaults `etc_dnsmasq_d = false`, ignoring legacy `/etc/dnsmasq.d/*.conf` files.
+- **Engineering Solution:** Enabled drop-in reading in `/etc/pihole/pihole.toml`:
+  ```bash
+  sed -i 's/etc_dnsmasq_d = false/etc_dnsmasq_d = true/' /etc/pihole/pihole.toml
+  systemctl restart pihole-FTL
+  ```
+
+---
+
+#### 4. Failure: Self-Signed Certificate Security Warning (`NET::ERR_CERT_AUTHORITY_INVALID`)
+- **Symptoms:** Browsers blocked access to `https://pve.snowfox.live` with an invalid authority warning.
+- **Root Cause:** Container bootstrap generated a self-signed placeholder certificate (`issuer=CN=*.snowfox.live`) so Nginx could start before public CA verification was completed.
+- **Engineering Solution:** Deployed declarative Terraform module [`iac/terraform/acme-wildcard`](../iac/terraform/acme-wildcard) utilizing `vancluever/acme` and Cloudflare DNS-01 API challenges. Let's Encrypt issued a valid wildcard signed by its production root CA, streaming directly to LXC 201 with zero downtime.
+
+---
+
+#### 5. Failure: Cloudflare R2 Object Storage Token vs Management API Token
+- **Symptoms:** User saved a token in Bitwarden with S3 credentials (`Access Key ID`, `Secret Access Key`, S3 endpoint); Cloudflare rejected it during zone verification with `code 1000: Invalid API Token`.
+- **Root Cause:** The token had been created under the Cloudflare R2 storage dashboard rather than Account/Zone API Tokens. R2 tokens authenticate exclusively against S3/R2 bucket endpoints and lack permissions for DNS, Zones, or Workers.
+- **Engineering Solution:** Authenticated using the user's verified Global API Key, programmatically called `POST /user/tokens` to generate a dedicated `Terraform-Homelab-Master` token with exact permissions (`DNS Write`, `Zone Settings Write`, `Firewall Services Write`, `Workers Write`, `Tunnel Write`, `SSL Write`), and synchronized the new token into Bitwarden as `Cloudflare Master Terraform Token`.
+
+---
+
+#### 6. Failure: SSH JumpHost Authentication Failure during Local-Exec
+- **Symptoms:** Terraform provisioner local-exec stalled or prompted for password when targeting `root@192.168.1.2`.
+- **Root Cause:** `~/.ssh/config` contained `Host proxmox` matching only the alias, not the literal IP address `192.168.1.2`.
+- **Engineering Solution:** Expanded `~/.ssh/config` to match both alias and IP:
+  ```ssh-config
+  Host proxmox 192.168.1.2
+      HostName 192.168.1.2
+      User root
+      IdentityFile ~/.ssh/id_rsa_gemini_codeberg
+
+  Host nginx-safe 10.10.10.10
+      HostName 10.10.10.10
+      User root
+      IdentityFile ~/.ssh/id_rsa_gemini_codeberg
+  ```
+  Terraform's local-exec streams certificates and triggers `systemctl reload nginx` non-interactively in sub-second time.
+

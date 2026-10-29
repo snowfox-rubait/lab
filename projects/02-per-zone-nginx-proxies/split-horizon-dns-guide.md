@@ -280,3 +280,31 @@ HTTP/1.1 200 OK
 | **Inbound Ports Required** | ❌ Requires port 80/443 forwarded for HTTP-01 | ✅ **Zero Inbound Ports** (Uses Cloudflare DNS-01 API) |
 | **Port Numbers in URLs** | ❌ Still required (e.g. `:8006`, `:3000`) | ✅ **Standard Port 443** everywhere |
 | **Certificate Trust** | ❌ Untrusted / Self-signed browser errors | ✅ **100% Valid Public CA** Green Padlock |
+
+---
+
+## 🛠️ 5. Engineering Post-Mortem: What, How, Why, Failures & Solves
+
+> **Full Architectural Reference:** See [ADR-008 Section 5](../../knowledge/architecture-decisions.md#5-engineering-post-mortem-what-how-why-failures--solves).
+
+### Summary Table: Problems Encountered & Exact Solves
+
+| # | Encountered Issue | Root Cause | Implemented Engineering Solution | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| **1** | **Asymmetric TCP drop on Wi-Fi** | OpenWrt VM sent return SYN-ACK directly to workstation Wi-Fi MAC, bypassing physical router conntrack. | Added persistent `/etc/nftables.d/20-proxmox-zones-masq.nft` (`ip daddr 10.0.0.0/8 oifname "br-lan" masquerade`) on physical router. | 🟢 Solved |
+| **2** | **RFC 3442 Option 121 cleared default gateway** | RFC 3442 mandates DHCP clients ignore Option 3 (gateway) when Option 121 is sent. | Included `0.0.0.0/0,192.168.1.1` in Option 121 alongside `10.0.0.0/8,192.168.1.129`. | 🟢 Solved |
+| **3** | **Pi-hole v6 drop-in DNS config ignored** | Pi-hole v6 defaults to `etc_dnsmasq_d = false` in `/etc/pihole/pihole.toml`. | Set `etc_dnsmasq_d = true` and deployed `/etc/dnsmasq.d/05-custom-snowfox.conf`. | 🟢 Solved |
+| **4** | **Browser `NET::ERR_CERT_AUTHORITY_INVALID`** | LXC 201 was running temporary bootstrap self-signed certificate. | Automated Let's Encrypt Wildcard certificate via Terraform [`iac/terraform/acme-wildcard`](../../iac/terraform/acme-wildcard). | 🟢 Solved |
+| **5** | **Cloudflare R2 storage token rejected** | Token was generated under R2 Object Storage (with S3 credentials) rather than Account/Zone API Tokens. | Programmatically generated dedicated `Terraform-Homelab-Master` token using Global API Key, saved to Bitwarden. | 🟢 Solved |
+| **6** | **Terraform JumpHost SSH authentication prompt** | `~/.ssh/config` matched `Host proxmox` but not literal IP `192.168.1.2`. | Updated `~/.ssh/config` to match both alias and IP with `id_rsa_gemini_codeberg`. | 🟢 Solved |
+
+---
+
+### Live Verification Matrix
+All endpoints verified with strict public CA validation from workstation PC:
+- `https://pve.snowfox.live` $\rightarrow$ `HTTP 200 OK` (Issuer: Let's Encrypt `YR1`)
+- `https://router.snowfox.live` $\rightarrow$ `HTTP 200 OK` (LuCI Dashboard)
+- `https://pihole.snowfox.live` $\rightarrow$ `HTTP 200 OK` (Pi-hole Dashboard)
+- `https://wan.snowfox.live` $\rightarrow$ `HTTP 200 OK` (WAN Gateway Controller)
+- `https://short-admin.snowfox.live` $\rightarrow$ `HTTP 200 OK` (URL Shortener Admin)
+

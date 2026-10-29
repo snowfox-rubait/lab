@@ -14,6 +14,14 @@
 - **Problem:** Resolving local IPs (e.g. `192.168.1.x`) via a public domain name like `*.snowfox.live` gets dropped by OpenWrt/dnsmasq by default due to DNS rebind protection.
 - **Fix:** Always add `list rebind_domain 'snowfox.live'` in `/etc/config/dhcp`.
 
+#### ❌ Pushing DHCP Option 121 without Explicit Default Route (`0.0.0.0/0`)
+- **Problem:** RFC 3442 mandates that when DHCP Option 121 (Classless Static Routes) is provided, client operating systems MUST ignore DHCP Option 3 (Router default gateway). If a router advertises only internal routes (e.g., `121,10.0.0.0/8,192.168.1.129`), clients delete their default gateway (`0.0.0.0/0 via 192.168.1.1`), completely dropping all general internet connectivity.
+- **Fix:** Always bundle the default gateway into Option 121: `121,0.0.0.0/0,192.168.1.1,10.0.0.0/8,192.168.1.129` (and mirror in Option 249 for legacy Windows).
+
+#### ❌ Permitting Asymmetric Layer 2 Return Paths Across Subnet Routers
+- **Problem:** When two routers share a LAN (e.g. physical router `192.168.1.1` and Proxmox OpenWrt VM `192.168.1.129`), client packets to internal zones traverse the physical router, but return packets from the VM bypass the physical router and go straight to the client MAC over Layer 2. The physical router never sees the TCP `SYN-ACK`, marks subsequent client `ACK` packets as invalid/out-of-state, and drops all TCP sessions.
+- **Fix:** Add a persistent nftables masquerade rule on the physical router (`ip daddr 10.0.0.0/8 oifname "br-lan" masquerade` in `/etc/nftables.d/20-proxmox-zones-masq.nft`) to force symmetrical conntrack tracking.
+
 ---
 
 ### 2. Proxmox & Virtualization
@@ -85,3 +93,15 @@
 #### ❌ Neglecting routed/masqueraded gateway IP in `pg_hba.conf`
 - **Problem:** When containers communicate across OpenWrt VM bridges (e.g., `vmbr2` $\rightarrow$ `vmbr7`), the OpenWrt router firewall masquerades the traffic with source IP `10.70.70.1`. If PostgreSQL's `pg_hba.conf` is locked down to only accept the originating container IP `10.20.20.11/32`, connections are rejected with `FATAL: no pg_hba.conf entry for host "10.70.70.1"`.
 - **Fix:** Always authorize the routed gateway subnet in `pg_hba.conf` (`10.70.70.0/24`).
+
+---
+
+### 8. Cloudflare, Edge Security & ACME TLS Automation
+
+#### ❌ Confusing Cloudflare R2 Storage Tokens with Account / DNS Management Tokens
+- **Problem:** Generating a token under the Cloudflare R2 dashboard produces an S3-compatible bucket token (`Access Key ID`, `Secret Access Key`, `cfat_...`). Using this token in Terraform or ACME certbot for DNS verification fails immediately with `Invalid API Token (code 1000)`.
+- **Fix:** Management tokens for Terraform and ACME DNS-01 verification MUST be generated under **User Profile $\rightarrow$ API Tokens** with permissions for `Zone:DNS:Edit` and `Zone:Settings:Edit`, or generated programmatically via the Cloudflare API (`POST /user/tokens`).
+
+#### ❌ Relying on Self-Signed Certificates for Internal Portals
+- **Problem:** Self-signed certificates cause persistent browser warning screens (`NET::ERR_CERT_AUTHORITY_INVALID`), break browser extensions, and disrupt WebSocket communication (e.g. Proxmox NoVNC console).
+- **Fix:** Automate genuine Let's Encrypt Wildcard certificates (`*.snowfox.live`) using DNS-01 API TXT record validation. Because validation occurs entirely over the Cloudflare DNS API, zero public ports need to be forwarded or exposed to the internet.

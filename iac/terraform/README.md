@@ -66,15 +66,18 @@ terraform plan
 terraform apply
 ```
 
-### 3. Wildcard TLS Certificate Issuance & Nginx Deployment
+### 3. Wildcard TLS Certificate Issuance & Nginx Deployment (🟢 Live & Verified)
 ```bash
 cd iac/terraform/acme-wildcard
 cp terraform.tfvars.example terraform.tfvars
-# Fill in cloudflare_api_token
+# Fill in cloudflare_api_token (or cloudflare_email + cloudflare_api_key)
 
 terraform init
 terraform plan
 terraform apply
 ```
-*(Automatically registers with Let's Encrypt, creates DNS-01 verification TXT records on Cloudflare, deploys certs into LXC 201, and reloads Nginx).*
+- **Provider:** `vancluever/acme`
+- **Challenge:** Automated DNS-01 TXT record via Cloudflare API (zero open inbound ports).
+- **Automation:** Provisions `fullchain.pem` + `privkey.pem` directly to LXC 201 (`10.10.10.10`) via SSH, validates Nginx config, and triggers `systemctl reload nginx`.
+- **Status:** Active in production (Issuer: Let's Encrypt `YR1`, valid through 2027-01-27). Verified with green padlock across `pve.snowfox.live`, `router.snowfox.live`, `pihole.snowfox.live`, `wan.snowfox.live`.
 
