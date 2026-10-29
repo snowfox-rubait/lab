@@ -12,6 +12,7 @@
 - [ADR-005 Out-of-Band Pi-hole DNS Sinkhole and Strict Fallback Parental Controls](#adr-005-out-of-band-pi-hole-dns-sinkhole-and-strict-fallback-parental-controls) *(2026-10-24)*
 - [ADR-006 Dedicated Database Tier vmbr7 and Zero-Trust Inter-Bridge Firewall Hardening](#adr-006-dedicated-database-tier-vmbr7-and-zero-trust-inter-bridge-firewall-hardening) *(2026-10-24)*
 - [ADR-007 Authoritative Internal Unicast DNS (.lab) Hierarchy vs. Multicast DNS (mDNS) in Segmented Zero-Trust Architecture](#adr-007-authoritative-internal-unicast-dns-lab-hierarchy-vs-multicast-dns-mdns-in-segmented-zero-trust-architecture) *(2026-10-29)*
+- [ADR-008 Split-Horizon DNS with Wildcard Let's Encrypt via DNS-01 for Zero-Leak Internal HTTPS](#adr-008-split-horizon-dns-with-wildcard-lets-encrypt-via-dns-01-for-zero-leak-internal-https) *(2026-10-29)*
 
 ---
 
@@ -409,4 +410,89 @@ Instead of mDNS, we adopt **Centralized Unicast Local DNS** anchored in OpenWrt 
 1. **Routable Across All Bridges:** Standard unicast DNS queries (UDP/TCP 53) traverse routed firewall pinholes seamlessly without requiring multicast reflection.
 2. **Strict Firewall Compliance:** Devices can only query and resolve nodes permitted by firewall policies.
 3. **Dual Benefit:** Humans and services use clean human-readable domain names (`https://vaultwarden.lab:8443`, `postgresql://user@db.lab:5432/db`), while the deterministic static IP inventory is preserved.
+
+---
+
+## ADR-008: Split-Horizon DNS with Wildcard Let's Encrypt via DNS-01 for Zero-Leak Internal HTTPS
+
+- **Date:** 2026-10-29
+- **Status:** Approved & Implemented
+- **Scope:** Internal web service access model, SSL/TLS certificate automation, and dual-layer name resolution strategy across `vmbr0` (Physical LAN) and `vmbr1` (Safe Internal).
+
+---
+
+### 1. Context & Architectural Inquiry
+The user proposed accessing homelab services via branded domain names (`https://<service>.snowfox.live`) while keeping them strictly private to the household:
+> *"what if we do : https://(anyservice hosted on proxmox but not exposed to public).snowfox.live/ it will work for me because it would return a local ip like 192.168.1.x:port, but for anyone outside my network, they would get nothing. why don't we do that for all our services? is it already done?"*
+
+We evaluated two technical implementation paths to achieve this requirement.
+
+---
+
+### 2. Comparative Technical Evaluation
+
+#### Option A: Naive Public DNS Records Pointing to RFC1918 Private IPs (Rejected)
+In this model, Cloudflare public authoritative DNS holds unproxied (DNS-only) A records pointing to internal IPs (e.g. `gitea.snowfox.live` $\rightarrow$ `10.10.10.15`).
+
+**Critical Architectural Flaws:**
+1. **DNS Rebinding Defense Dropping Responses:** Modern security resolvers (including OpenWrt `dnsmasq` with `rebind_protection '1'`, Pi-hole, Google DNS, and browser sandboxes) automatically detect and drop public DNS queries resolving to private RFC1918 address space (`10.0.0.0/8`, `192.168.0.0/16`) to prevent cross-origin rebinding exploits. Local users experience intermittent `NXDOMAIN` failures.
+2. **Reconnaissance & Topology Leakage:** Public OSINT scrapers (`subfinder`, `crt.sh`, `amass`, `dig`) can enumerate the entire private service inventory, internal IP scheme, and zone topology.
+3. **DNS Port Limitation:** Standard DNS records (A/AAAA/CNAME) can only return an IP address, **never a port number** (`:8006`, `:3000`). Accessing `https://pve.snowfox.live` defaults to port 443; without a reverse proxy, connection attempts fail.
+4. **Untrusted SSL Warnings:** Private IPs cannot obtain public CA certificates; browsers throw alarming red self-signed security warnings.
+
+#### Option B: Split-Horizon DNS + ACME DNS-01 Wildcard Let's Encrypt (Adopted)
+In this model:
+1. **Zero Public DNS Exposure:** Public Cloudflare DNS holds zero records for private internal services. External scanners receive `NXDOMAIN`.
+2. **Internal DNS Authoritative Override:** Local resolvers (OpenWrt `dnsmasq` and Pi-hole) authoritatively resolve `*.snowfox.live` to the internal reverse proxy (`10.10.10.10`).
+3. **Automated ACME DNS-01 Wildcard Certificates:** A valid, globally trusted Let's Encrypt wildcard certificate (`*.snowfox.live` + `snowfox.live`) is issued via Cloudflare API DNS TXT challenge, requiring **zero open inbound ports**.
+4. **Internal Reverse Proxy (`nginx-safe` on `10.10.10.10`):** Listens on standard HTTPS port 443 with the wildcard certificate and proxies requests to backend microservices based on SNI `Host` headers.
+
+---
+
+### 3. Decisions & Implementation Blueprint
+
+```
+═════════════════════════════════════════════════════════════════════════════════
+                  INTERNAL CLIENT (LAN / TAILSCALE / WI-FI)
+═════════════════════════════════════════════════════════════════════════════════
+                                     │
+                  Resolves https://gitea.snowfox.live
+                                     │
+                                     ▼
+                     Local OpenWrt / Pi-hole DNS
+                     (Authoritative Split-Horizon)
+                     address=/snowfox.live/10.10.10.10
+                     rebind_domain=snowfox.live
+                                     │
+                                     ▼
+                ┌─────────────────────────────────────────┐
+                │        nginx-safe (LXC 201)             │
+                │        IP: 10.10.10.10 (vmbr1)          │
+                │  TLS: *.snowfox.live (Let's Encrypt)    │
+                │  Port: 443 HTTPS (Standard / Trusted)   │
+                └────────────────────┬────────────────────┘
+                                     │
+         ┌───────────────────────────┼───────────────────────────┐
+         │                           │                           │
+         ▼                           ▼                           ▼
+[ Gitea (10.10.10.15:3000) ]  [ n8n (10.10.10.25:5678) ]  [ Proxmox (192.168.1.2:8006) ]
+
+═════════════════════════════════════════════════════════════════════════════════
+                     PUBLIC INTERNET / EXTERNAL SCANNERS
+═════════════════════════════════════════════════════════════════════════════════
+                                     │
+                  Resolves https://gitea.snowfox.live
+                                     ▼
+                        Cloudflare Public DNS
+                                     ▼
+                       NXDOMAIN (Zero IP Leakage)
+```
+
+1. **Dual DNS Naming Standard:**
+   - **Machine-to-Machine / Infrastructure:** Retains internal Unicast `.lab` hierarchy (`pve.lab`, `db.lab`, `router.lab`) per ADR-007.
+   - **User-Facing Web Portals:** Resolves via `*.snowfox.live` (`pve.snowfox.live`, `gitea.snowfox.live`, `n8n.snowfox.live`, `short-admin.snowfox.live`) with standard green-padlock HTTPS.
+2. **OpenWrt Anti-Rebinding Exception:**
+   - Enforce `uci add_list dhcp.@dnsmasq[0].rebind_domain='snowfox.live'` on OpenWrt router to permit local resolution without triggering security drops.
+3. **Automated Certificate Lifecycle:**
+   - Deploy `certbot` / `acme.sh` with `dns-cloudflare` plugin inside `nginx-safe` (`10.10.10.10`) running bi-monthly cron renewal and Nginx reload hooks.
 

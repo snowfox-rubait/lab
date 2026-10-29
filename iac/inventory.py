@@ -102,6 +102,20 @@ nginx_public = [
     )
 ]
 
+# Safe Internal Reverse Proxy & Split-Horizon TLS (LXC 201 on vmbr1)
+nginx_safe = [
+    (
+        "10.10.10.10",
+        {
+            "ssh_user": "root",
+            "ssh_key": "~/.ssh/id_rsa_gemini_codeberg",
+            "hostname": "internal.lab",
+            "role": "safe_ingress",
+            "os_family": "debian",
+        },
+    )
+]
+
 # Production Password Manager (LXC 220 on vmbr2)
 vaultwarden = [
     (

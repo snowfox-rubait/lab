@@ -152,21 +152,35 @@ All homelab services live behind the OpenWrt VM, partitioned by protocol, access
 
 ---
 
-## 🐛 4. Provisioning Notes & Fixes Implemented
+## 🛠️ 4. Reverse Proxy Implementation Artifacts
 
-1. **Proxmox LXC Systemd Nesting:** Configured `pct set 200 --features nesting=1` to allow systemd inside Debian 12 unprivileged containers.
-2. **Daemon Deployment:** Python web service cleanly transferred and managed via `systemctl enable --now wan-webui.service`.
-3. **SSH Host Key Pinning (StrictHostKeyChecking Hardened):**
-   - Public key auth established between `root@wan-controller` and physical router (`192.168.1.1`).
-   - Hardened `app.py`: Removed all insecure `-o StrictHostKeyChecking=no` flags.
-   - Pinned physical router's host ed25519 key into `/root/.ssh/known_hosts` inside LXC 200 using `ssh-keyscan -H 192.168.1.1` to eliminate MITM attack vectors.
+### 4.1 Safe Internal Proxy (`nginx-safe` on LXC 201 `10.10.10.10` / `vmbr1`)
+- **Virtual Host Configuration:** [`nginx-safe.conf`](nginx-safe.conf)
+  - Terminates `*.snowfox.live` with valid Let's Encrypt wildcard certificate via standard port 443.
+  - Proxies:
+    - `pve.snowfox.live` $\rightarrow$ `192.168.1.2:8006` (Proxmox VE Web UI + WebSocket NoVNC)
+    - `router.snowfox.live` $\rightarrow$ `192.168.1.1:80` (Physical Archer C6 LuCI)
+    - `wan.snowfox.live` $\rightarrow$ `192.168.1.130:80` (WAN Controller LXC 200)
+    - `pihole.snowfox.live` $\rightarrow$ `192.168.1.135:80` (Pi-hole OOB Console)
+    - `gitea.snowfox.live` $\rightarrow$ `10.10.10.15:3000` (Gitea Git Server)
+    - `n8n.snowfox.live` $\rightarrow$ `10.10.10.25:5678` (n8n Workflow Engine)
+    - `short-admin.snowfox.live` $\rightarrow$ `10.10.10.35:8080` (Project 13 Short Link Manager)
+    - `ha.snowfox.live` $\rightarrow$ `10.30.30.5:8123` (Home Assistant Core)
+- **Wildcard Certificate Provisioner (DNS-01):** [`scripts/issue-wildcard-cert.sh`](scripts/issue-wildcard-cert.sh)
+- **OpenWrt Split-Horizon DNS Configurator:** [`scripts/setup-split-dns-openwrt.sh`](scripts/setup-split-dns-openwrt.sh)
+- **Complete Runbook:** [Split-Horizon DNS & Wildcard HTTPS Engineering Guide](split-horizon-dns-guide.md)
+
+### 4.2 Public Ingress Proxy (`nginx-public` on LXC 202 `10.20.20.10` / `vmbr2`)
+- **Virtual Host Configuration:** [`nginx-public.conf`](nginx-public.conf)
+  - Services `vault.snowfox.live` via Cloudflare Tunnel daemon (`cloudflared`).
 
 ---
 
-## 📋 5. Next Implementation Milestones
+## 📋 5. Implementation Milestones
 
 - [x] **Configure Proxmox Bridges:** Defined `vmbr0`–`vmbr7`, `vmbr100` in `/etc/network/interfaces` on Proxmox host.
 - [x] **OpenWrt VM Virtual NICs:** Attached virtual interfaces for bridges to VM 100.
 - [x] **Deploy `nginx-public` (LXC 202):** Debian 13 on `vmbr2` (`10.20.20.10`) running `cloudflared` tunnel for Vaultwarden with Bangladesh Geo-Fence.
-- [ ] **Deploy `nginx-safe` (LXC 201):** Debian 13 on `vmbr1` (`10.10.10.10`) for Safe Internal services (Gitea, Immich, n8n).
+- [x] **Design & Blueprint `nginx-safe` (LXC 201):** Configured [`nginx-safe.conf`](nginx-safe.conf), wildcard cert generator, and OpenWrt Split-Horizon DNS automation ([ADR-008](../../knowledge/architecture-decisions.md#adr-008-split-horizon-dns-with-wildcard-lets-encrypt-via-dns-01-for-zero-leak-internal-https)).
+- [ ] **Deploy `nginx-safe` Container:** Launch Debian 13 LXC 201 on `vmbr1` (`10.10.10.10`), generate wildcard cert, and activate Nginx virtual hosts.
 - [ ] **Configure OpenWrt Firewall Zones:** Establish zone drop rules enforcing unidirectional egress and strict quarantine for `vmbr4` and `vmbr5`.

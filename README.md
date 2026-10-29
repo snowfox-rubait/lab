@@ -205,7 +205,8 @@ flowchart TD
 ### 2. Per-Zone Nginx Reverse Proxies & WAN Dashboard
 - **Directory:** `projects/02-per-zone-nginx-proxies/`
 - **Documentation:** [Per-Zone Nginx Reverse Proxy Architecture](projects/02-per-zone-nginx-proxies/README.md)
-- **Current Component:** `wan-controller` (LXC 200, `192.168.1.130`) hosting the WAN Controller WebUI dashboard.
+- **Engineering Guide:** [Split-Horizon DNS & Wildcard HTTPS Engineering Guide](projects/02-per-zone-nginx-proxies/split-horizon-dns-guide.md)
+- **Covers:** Out-of-band WAN Controller (`192.168.1.130`), Public Ingress Proxy (`10.20.20.10`), Safe Internal Proxy (`nginx-safe` on `10.10.10.10`), and Split-Horizon DNS (`*.snowfox.live`) with automated Let's Encrypt wildcard certificates via Cloudflare DNS-01.
 
 ### 3. Vaultwarden Production Service & Monetization
 - **Directory:** `projects/03-vaultwarden-service/`
