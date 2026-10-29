@@ -1,7 +1,7 @@
 # 🛡️ Per-Zone Reverse Proxy & Out-of-Band Management Architecture
 
 > **Project ID:** `02-per-zone-nginx-proxies`  
-> **Status:** Phase 1 Completed (`wan-controller` on `vmbr0`)  
+> **Status:** Phase 2 Completed (`wan-controller` on `vmbr0`, `nginx-safe` live on `vmbr1`)  
 > **Architecture Principle:** Strict Network Segmentation via Isolated Reverse Proxies with Independent Out-of-Band Physical Management  
 > **Authoritative ADR:** [ADR-001 (Master Topology & Bridges)](../../knowledge/architecture-decisions.md#adr-001-master-topology-refinement-and-ingress-egress-realignment)
 
@@ -182,5 +182,5 @@ All homelab services live behind the OpenWrt VM, partitioned by protocol, access
 - [x] **OpenWrt VM Virtual NICs:** Attached virtual interfaces for bridges to VM 100.
 - [x] **Deploy `nginx-public` (LXC 202):** Debian 13 on `vmbr2` (`10.20.20.10`) running `cloudflared` tunnel for Vaultwarden with Bangladesh Geo-Fence.
 - [x] **Design & Blueprint `nginx-safe` (LXC 201):** Configured [`nginx-safe.conf`](nginx-safe.conf), wildcard cert generator, and OpenWrt Split-Horizon DNS automation ([ADR-008](../../knowledge/architecture-decisions.md#adr-008-split-horizon-dns-with-wildcard-lets-encrypt-via-dns-01-for-zero-leak-internal-https)).
-- [ ] **Deploy `nginx-safe` Container:** Launch Debian 13 LXC 201 on `vmbr1` (`10.10.10.10`), generate wildcard cert, and activate Nginx virtual hosts.
+- [x] **Deploy `nginx-safe` Container:** Launched Debian 13 LXC 201 on `vmbr1` (`10.10.10.10`), deployed [`nginx-safe.conf`](nginx-safe.conf), and enabled Split-Horizon DNS resolution for `*.snowfox.live` across physical router and Pi-hole.
 - [ ] **Configure OpenWrt Firewall Zones:** Establish zone drop rules enforcing unidirectional egress and strict quarantine for `vmbr4` and `vmbr5`.
