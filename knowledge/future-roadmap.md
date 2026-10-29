@@ -48,6 +48,8 @@
 - **Developer & IT Utilities:**
   - **IT-Tools:** Ultralight Swiss Army knife collection of handy online developer & sysadmin utilities (token generators, converters, encoders, regex testers, cheatsheets).
   - **OmniTools:** Self-hosted developer multi-tool suite (formatters, parsers, converters, code generators).
+- **Personal URL Shortener (`short.snowfox.live`):**
+  - Personal branded short-link redirection service (evaluating Cloudflare Workers + KV for 24/7 edge uptime vs. self-hosted Shlink on PostgreSQL `vmbr2`). Private authenticated single-user generation, public friction-free redirection. (See [Project 13](../projects/13-personal-url-shortener/README.md)).
 
 ---
 
@@ -111,6 +113,7 @@ The baseline infrastructure is live under [07-pihole-dns-sinkhole](../projects/0
 | **BentoPDF** | Static Web / Docker LXC | Safe Internal (`vmbr1`) | Low |
 | **IT-Tools** | Docker in Debian 13 LXC | Safe Internal (`vmbr1`) | Low |
 | **OmniTools** | Docker in Debian 13 LXC | Safe Internal (`vmbr1`) | Low |
+| **Personal URL Shortener (`short.snowfox.live`)** | Cloudflare Worker / LXC | Cloudflare Edge / Public Ingress (`vmbr2`) | Low (`13-personal-url-shortener`) |
 | **Headscale** | *Undecided / Separated* | *Deferred (Out of current scope)* | Medium |
 | **Home Assistant Core** | Dedicated Proxmox VM / LXC | Home Assistant & IoT (`vmbr3`) | Medium |
 | **MQTT Broker (Mosquitto)**| Debian 13 LXC | Home Assistant & IoT (`vmbr3`) | Low |

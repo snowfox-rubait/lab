@@ -264,3 +264,9 @@ flowchart TD
 - **Documentation:** [Central Database Service Architecture](projects/12-central-database-service/README.md)
 - **Current Live Status:** Provisioned on Proxmox (LXC 210 on `vmbr7` at `10.70.70.10`)
 - **Covers:** Debian 13 host parity, dedicated database tier (`vmbr7`), role-and-database level multi-tenancy, Vaultwarden/Gitea/n8n pinhole routing, zero-WAN-egress isolation, and companion cloud backup landing zone for Neon & Supabase.
+
+### 13. Personal Branded URL Shortener (`short.snowfox.live`)
+- **Directory:** `projects/13-personal-url-shortener/`
+- **Documentation:** [Personal URL Shortener Architecture](projects/13-personal-url-shortener/README.md)
+- **Status:** Planned / Architecture & Evaluation Blueprint
+- **Covers:** Private single-user link generation (`POST /api/shorten` / Telegram bot), unrestricted public redirection (`GET /:slug`), Cloudflare Workers + KV zero-downtime edge architecture vs self-hosted Shlink on PostgreSQL (`vmbr2` / `vmbr7`).

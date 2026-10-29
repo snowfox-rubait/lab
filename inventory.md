@@ -143,6 +143,7 @@ The HP EliteDesk Mini PC currently runs several local services:
 | **Mosquitto MQTT Broker** | Proxmox LXC | `10.30.30.2` (`vmbr3`) | ⚪ **Planned** | Planned broker for ESP32/ESP8266 telemetry (`EXP-003`) |
 | **Suricata / Snort L7 DPI** | Proxmox LXC / VM | `10.50.50.10` (`vmbr5`) | ⚪ **Planned** | L7 deep packet inspection, TLS SNI filtering, and automated threat mitigation (`knowledge/security-anti-bypass-vpn-dns-defense`) |
 | **Management Bots (LXC)** | Proxmox LXC | `10.60.60.10` (`vmbr6`) | ⚪ **Planned** | Planned isolated bot container with forced-command SSH wrapper |
+| **Personal URL Shortener (`short.snowfox.live`)** | Cloudflare Edge / LXC 225 | Edge / `10.20.20.25` (`vmbr2`) | ⚪ **Planned** | Branded short-links (`short.snowfox.live`), private admin creation, public 24/7 redirection (`projects/13-personal-url-shortener`) |
 
 ---
 
