@@ -1,6 +1,20 @@
 variable "cloudflare_api_token" {
   type        = string
+  default     = null
   description = "Cloudflare API Token with Zone.DNS:Edit permissions for snowfox.live"
+  sensitive   = true
+}
+
+variable "cloudflare_email" {
+  type        = string
+  default     = null
+  description = "Cloudflare account email (when using Global API Key)"
+}
+
+variable "cloudflare_api_key" {
+  type        = string
+  default     = null
+  description = "Cloudflare Global API Key (master access key)"
   sensitive   = true
 }
 

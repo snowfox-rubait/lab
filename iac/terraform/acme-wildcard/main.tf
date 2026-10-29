@@ -27,9 +27,15 @@ resource "acme_certificate" "wildcard_cert" {
   dns_challenge {
     provider = "cloudflare"
 
-    config = {
-      CF_DNS_API_TOKEN = var.cloudflare_api_token
-    }
+    config = merge(
+      var.cloudflare_api_token != null && var.cloudflare_api_token != "" ? {
+        CF_DNS_API_TOKEN = var.cloudflare_api_token
+      } : {},
+      var.cloudflare_api_key != null && var.cloudflare_api_key != "" ? {
+        CF_API_EMAIL = var.cloudflare_email
+        CF_API_KEY   = var.cloudflare_api_key
+      } : {}
+    )
   }
 }
 
