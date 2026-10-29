@@ -268,5 +268,5 @@ flowchart TD
 ### 13. Personal Branded URL Shortener (`short.snowfox.live`)
 - **Directory:** `projects/13-personal-url-shortener/`
 - **Documentation:** [Personal URL Shortener Architecture](projects/13-personal-url-shortener/README.md)
-- **Status:** Planned / Architecture & Evaluation Blueprint
-- **Covers:** Private single-user link generation (`POST /api/shorten` / Telegram bot), unrestricted public redirection (`GET /:slug`), Cloudflare Workers + KV zero-downtime edge architecture vs self-hosted Shlink on PostgreSQL (`vmbr2` / `vmbr7`).
+- **Status:** Planned / Architecture & Implementation Specification
+- **Covers:** Cloudflare Worker + KV edge redirection (24/7 zero-downtime), strict Bangladesh-only geo-fence (`request.cf.country === 'BD'`), and private air-gapped 2-page admin UI in Safe Internal Zone (`vmbr1`, `10.10.10.35` / `short.internal.lab`) synchronizing with Cloudflare via outbound-only HTTPS.
