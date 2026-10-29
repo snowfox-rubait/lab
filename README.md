@@ -13,6 +13,7 @@ Welcome to the lab repository. This vault tracks all architecture experiments, f
 - ⚠️ **Common Troubles & Quirks:** [common-troubles](knowledge/common-troubles.md) (Hardware crash recovery, driver workarounds)
 - 🧠 **Mistakes to Avoid (Lessons Learned):** [mistakes-to-avoid](knowledge/mistakes-to-avoid.md)
 - 🔧 **Troubleshooting Playbook:** [troubleshooting-playbook](knowledge/troubleshooting-playbook.md)
+- 🤖 **Infrastructure-as-Code (IaC) Framework:** [iac-framework](iac/README.md) (Agentless pyinfra & POSIX playbooks for Proxmox hardening, WAN controller, OpenWrt, and Pi-hole)
 - 📝 **New Experiment Template:** [experiment-template](templates/experiment-template.md)
 
 > [!IMPORTANT]

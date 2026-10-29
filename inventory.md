@@ -75,6 +75,30 @@ The HP EliteDesk Mini PC currently runs several local services:
 
 ---
 
+## 🌐 Authoritative Internal Unicast DNS Hierarchy (`.lab`)
+
+> **Architectural Standard:** Established in [ADR-007](knowledge/architecture-decisions.md#adr-007-authoritative-internal-unicast-dns-lab-hierarchy-vs-multicast-dns-mdns-in-segmented-zero-trust-architecture). To ensure clean resolution across isolated Layer-3 bridges without leaking broadcast discovery or violating zero-trust boundaries (avoiding mDNS), internal nodes are mapped via Unicast DNS (`dnsmasq` on OpenWrt and Pi-hole) under `.lab`:
+
+| Node / Service | Primary IP | Canonical FQDN | Bridge / Network Zone | Role / Purpose |
+| :--- | :--- | :--- | :--- | :--- |
+| **Physical Gateway** | `192.168.1.1` | `router.lab` | `vmbr0` (Home LAN) | Physical Archer C6 Gateway & DHCP |
+| **Proxmox Hypervisor** | `192.168.1.2` | `proxmox.lab` | `vmbr0` (Management) | PVE Web GUI (:8006) & Host SSH |
+| **WAN Controller** | `192.168.1.130`| `wan.lab` | `vmbr0` (OOB WebUI) | Fail-Safe WAN Mode Dashboard (:80) |
+| **Pi-hole Sinkhole** | `192.168.1.135`| `pihole.lab` | `vmbr0` (DNS OOB) | Out-of-Band Ad & Adult DNS Filter |
+| **Main Workstation** | `192.168.1.197`| `workstation.lab` | `vmbr0` (Admin LAN) | Management PC / Ollama / SearXNG |
+| **Virtual Core Router** | `192.168.1.129`| `vm-router.lab` | Multi-Bridge Core | OpenWrt VM (VM 100) Core Router |
+| **Public Reverse Proxy** | `10.20.20.10` | `ingress.lab` | `vmbr2` (Public Ingress) | Nginx Public Ingress (`nginx-public`) |
+| **Vaultwarden Vault** | `10.20.20.11` | `vaultwarden.lab`| `vmbr2` (Public Ingress) | Encrypted Bitwarden Vault (:8443) |
+| **Central Database** | `10.70.70.10` | `db.lab` | `vmbr7` (Database Tier) | Multi-tenant PostgreSQL 17 & Redis 7 |
+| **Database Backup Sync** | `10.70.70.11` | `dbbackup.lab` | `vmbr7` (Database Tier) | Automated Cold-Backup Sync Engine |
+| **Internal Safe Proxy** | `10.10.10.10` | `internal.lab` | `vmbr1` (Safe Internal) | Nginx Safe Proxy (`nginx-safe`) |
+| **Gitea Source Control** | `10.10.10.15` | `gitea.lab` | `vmbr1` (Safe Internal) | Self-Hosted Git Repository Server |
+| **n8n Automation** | `10.10.10.25` | `n8n.lab` | `vmbr1` (Safe Internal) | Event & Incident Automation Engine |
+| **Mosquitto MQTT** | `10.30.30.2` | `mqtt.lab` | `vmbr3` (IoT Zone) | Local IoT Sensor Telemetry Broker |
+| **Home Assistant** | `10.30.30.5` | `ha.lab` | `vmbr3` (IoT Zone) | Central Home Automation Hub |
+
+---
+
 ## 🖧 Hardware MAC Addresses & WOL Reference
 
 > **Note:** Exact hardware MAC addresses are maintained in the local gitignored `.env` file (see `.env.example`).

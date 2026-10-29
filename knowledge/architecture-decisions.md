@@ -11,6 +11,7 @@
 - [ADR-004 Live Node Zone Realignment, WAN Metric Priority, and Zero-Drift Standardization](#adr-004-live-node-zone-realignment-wan-metric-priority-and-zero-drift-standardization) *(2026-10-23)*
 - [ADR-005 Out-of-Band Pi-hole DNS Sinkhole and Strict Fallback Parental Controls](#adr-005-out-of-band-pi-hole-dns-sinkhole-and-strict-fallback-parental-controls) *(2026-10-24)*
 - [ADR-006 Dedicated Database Tier vmbr7 and Zero-Trust Inter-Bridge Firewall Hardening](#adr-006-dedicated-database-tier-vmbr7-and-zero-trust-inter-bridge-firewall-hardening) *(2026-10-24)*
+- [ADR-007 Authoritative Internal Unicast DNS (.lab) Hierarchy vs. Multicast DNS (mDNS) in Segmented Zero-Trust Architecture](#adr-007-authoritative-internal-unicast-dns-lab-hierarchy-vs-multicast-dns-mdns-in-segmented-zero-trust-architecture) *(2026-10-29)*
 
 ---
 
@@ -343,4 +344,69 @@ Configured on OpenWrt VM (`openwrt-vm`):
 - **Three-Tier Architecture:** Establishes classic industry-standard 3-Tier security: Ingress Tier (`vmbr2`) $\rightarrow$ Application Tier (`vmbr1`) $\rightarrow$ Database Tier (`vmbr7`).
 - **Data Protection:** A compromise in any single web application container in `vmbr1` or `vmbr2` cannot access the underlying database filesystem or intercept traffic of adjacent services.
 - **Zero Drift:** Bridge `vmbr7` is active in the Proxmox kernel and synchronized across all architecture documents, runbooks, and inventory tables.
+
+---
+
+## ADR-007: Authoritative Internal Unicast DNS (.lab) Hierarchy vs. Multicast DNS (mDNS) in Segmented Zero-Trust Architecture
+
+- **Date:** 2026-10-29
+- **Status:** Approved & Adopted
+- **Scope:** Name resolution strategy across physical home network (`vmbr0`) and virtual segmented bridges (`vmbr1` through `vmbr7`).
+
+---
+
+### 1. Context & Peer Feedback Evaluation
+An external architecture review suggested: *"Instead of IPs try using mDNS if it works. One less inventory to manage or you can manage it in your OpenWRT."*
+
+While Multicast DNS (mDNS / Avahi / Bonjour on `.local`) is convenient for flat, single-broadcast-domain consumer networks, we evaluated whether replacing deterministic IP inventory with mDNS is viable for this homelab.
+
+---
+
+### 2. Architectural Analysis: Why mDNS Fails in This Infrastructure
+
+1. **Layer-2 Multicast Boundaries & Routing Isolation:**
+   - mDNS operates via link-local multicast over UDP port 5353 (`224.0.0.251` / `ff02::fb`) with a Time-To-Live (TTL) of 1.
+   - By RFC standard and kernel design, **Layer-2 multicast packets do not cross Layer-3 routed boundaries or separate Linux bridges** (`vmbr0` through `vmbr7`).
+   - Consequently, an LXC in `vmbr1` (Safe Internal) cannot discover or resolve nodes in `vmbr7` (Database) or `vmbr0` (Physical LAN) via mDNS without an active mDNS reflector/repeater daemon running on the router.
+
+2. **Security & Zero-Trust Violation:**
+   - Deploying an mDNS reflector across isolated bridges violates the core zero-trust principles established in ADR-001, ADR-003, and ADR-006.
+   - Multicast reflection broadcasts service announcements (`_http._tcp`, `_ssh._tcp`, hostnames) promiscuously across all bridged zones. This would leak database, hypervisor, and administrative node metadata into untrusted or low-trust zones (such as `vmbr3` IoT microcontrollers or `vmbr2` public ingress).
+
+3. **Invariance of Core Infrastructure Primitives:**
+   - Crucial infrastructure policies cannot bind to dynamic mDNS names:
+     - PostgreSQL client authentication (`pg_hba.conf`) requires explicit IP subnets (`10.70.70.0/24`) or static addresses.
+     - OpenWrt firewall pinholes and nftables chains operate on Layer-3 IP selectors.
+     - Fail2ban `ignoreip` requires immutable CIDR or IP definitions.
+     - Physical router DNS upstream forwarding (`strictorder`) requires deterministic IP sockets (`192.168.1.135:53`).
+   - Static IP allocation remains the indispensable ground truth for network stability and security auditing.
+
+---
+
+### 3. The Adopted Solution: Internal Authoritative Unicast DNS (`.lab`)
+
+Instead of mDNS, we adopt **Centralized Unicast Local DNS** anchored in OpenWrt (`dnsmasq`) and Pi-hole (`pihole-FTL`) under the dedicated private top-level domain `.lab`:
+
+| Node / Service | Static IP | Canonical FQDN | Zone / Bridge |
+| :--- | :--- | :--- | :--- |
+| **Physical Router Gateway** | `192.168.1.1` | `router.lab` | `vmbr0` (Home LAN) |
+| **Proxmox Hypervisor Host** | `192.168.1.2` | `proxmox.lab` | `vmbr0` (Management) |
+| **WAN Controller Dashboard** | `192.168.1.130`| `wan.lab` / `wan-controller.lab` | `vmbr0` (OOB WebUI) |
+| **Pi-hole DNS Sinkhole** | `192.168.1.135`| `pihole.lab` | `vmbr0` (DNS OOB) |
+| **Main Workstation PC** | `192.168.1.197`| `workstation.lab` / `rubait.lab` | `vmbr0` (Admin LAN) |
+| **OpenWrt Core Router VM** | `192.168.1.129`| `vm-router.lab` | Multi-Bridge Core |
+| **Public Ingress Reverse Proxy** | `10.20.20.10` | `ingress.lab` | `vmbr2` (Public Ingress) |
+| **Vaultwarden Password Vault** | `10.20.20.11` | `vaultwarden.lab` | `vmbr2` (Encrypted HTTPS) |
+| **Central Database Engine** | `10.70.70.10` | `db.lab` | `vmbr7` (Postgres / Redis) |
+| **Database Backup Sync** | `10.70.70.11` | `dbbackup.lab` | `vmbr7` (Cold Backup Sync) |
+| **Safe Internal Reverse Proxy**| `10.10.10.10` | `internal.lab` | `vmbr1` (Safe Apps Tier) |
+| **Gitea Source Control** | `10.10.10.15` | `gitea.lab` | `vmbr1` (Safe Internal) |
+| **n8n Workflow Automation** | `10.10.10.25` | `n8n.lab` | `vmbr1` (Safe Internal) |
+| **Mosquitto MQTT Broker** | `10.30.30.2` | `mqtt.lab` | `vmbr3` (IoT Zone) |
+| **Home Assistant Core** | `10.30.30.5` | `ha.lab` | `vmbr3` (IoT Zone) |
+
+#### Advantages:
+1. **Routable Across All Bridges:** Standard unicast DNS queries (UDP/TCP 53) traverse routed firewall pinholes seamlessly without requiring multicast reflection.
+2. **Strict Firewall Compliance:** Devices can only query and resolve nodes permitted by firewall policies.
+3. **Dual Benefit:** Humans and services use clean human-readable domain names (`https://vaultwarden.lab:8443`, `postgresql://user@db.lab:5432/db`), while the deterministic static IP inventory is preserved.
 
