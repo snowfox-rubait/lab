@@ -264,7 +264,7 @@ curl -vI https://pve.snowfox.live
 * ALPN: server accepted http/1.1
 * Server certificate:
 *  subject: CN=*.snowfox.live
-*  issuer: C=US; O=Let's Encrypt; CN=R10
+*  issuer: C=US; O=Let's Encrypt; CN=YR1
 *  SSL certificate verify ok.
 HTTP/1.1 200 OK
 ```

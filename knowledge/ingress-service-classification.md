@@ -13,9 +13,11 @@ Not everything that uses the internet is a "public-facing online service." Confu
 | Service | Traffic Direction | Requires Public Ingress? | Needs Cloudflare Tunnel? | Access Mechanism |
 | :--- | :--- | :---: | :---: | :--- |
 | **Vaultwarden** | **Inbound (Public Ingress)** | **YES** | **YES** | `vault.snowfox.live` (Cloudflare Tunnel + BD Geo-Fence) |
+| **Personal URL Shortener (13)** | **Public Edge / Private Admin**| **YES (Edge)** / **NO (Admin)**| **NO** | Public: `short.snowfox.live` (Cloudflare Worker + BD Geo-Fence)<br>Admin: `short-admin.snowfox.live` (`10.10.10.35` on `vmbr1`) |
+| **Internal Web Portals (PVE, OpenWrt, Pi-hole, WAN)** | **Internal LAN / Mesh Inbound** | **NO** | **NO** | `*.snowfox.live` via `nginx-safe` (`10.10.10.10` on `vmbr1`) + Split DNS |
 | **Headscale** | **Undecided / Future Evaluation** | **Deferred** | **Deferred** | Separated from `vmbr2`; deferred until core stack is battle-tested |
 | **Telegram Bots (06 & 09)** | **Outbound Only (Long-Polling)**| **NO** | **NO** | Egress polling to `api.telegram.org` (No listening port) |
-| **Gitea, Immich, BookStack**| **Inbound (Private LAN/Mesh)** | **NO** | **NO** | Tailscale / Safe Internal (`10.10.10.0/24`) |
+| **Gitea, Immich, BookStack**| **Inbound (Private LAN/Mesh)** | **NO** | **NO** | Tailscale / Split DNS (`*.snowfox.live`) / Safe Internal (`10.10.10.0/24`) |
 | **Home Assistant Core** | **Inbound (Private LAN/Mesh)** | **NO** | **NO** | Tailscale node in `vmbr3` (`10.30.30.10`) |
 | **MQTT Broker (Mosquitto)** | **Local Inbound Only** | **NO** | **NO** | Local Wi-Fi VLAN 30 (`10.30.30.2:1883`) |
 | **Central Database (Postgres)**| **Isolated Offline** | **NO** | **NO** | Dedicated `vmbr7` (Internal pinholes only) |
@@ -27,13 +29,13 @@ Not everything that uses the internet is a "public-facing online service." Confu
 
 In Cloudflare, the WAF rule deployed via Terraform:
 ```terraform
-expression = "(ip.geoip.country ne \"BD\")"
+expression = "(ip.geoip.country ne \"BD\" and http.host ne \"simplearch.snowfox.live\")"
 action     = "block"
 ```
 is a **Zone-Level Custom Rule** for your apex domain `snowfox.live`.
 
-- **Universal Coverage:** Because it applies to the entire zone, it automatically protects **every single current and future subdomain** (`vault.snowfox.live`, `vpn.snowfox.live`, `git.snowfox.live`, etc.) that is proxied through Cloudflare.
-- **Zero Leakage:** Any HTTP/HTTPS request originating outside Bangladesh (`country != "BD"`) is blocked at Cloudflare's Anycast edge before it can reach your tunnel or home network.
+- **Universal Coverage with Scoped Exceptions:** Protects private internal subdomains (`vault.snowfox.live`, `vpn.snowfox.live`, etc.) by restricting ingress strictly to Bangladesh (`country == "BD"`), while explicitly exempting global public community tools like `simplearch.snowfox.live`.
+- **Zero Leakage:** Any non-BD traffic targeting protected subdomains is dropped at Cloudflare's Anycast edge before reaching the tunnel or homelab.
 
 ---
 
