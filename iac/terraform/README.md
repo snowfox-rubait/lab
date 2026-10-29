@@ -10,6 +10,12 @@
 
 ```
 iac/terraform/
+├── acme-wildcard/               # Automated Wildcard TLS Certificate (DNS-01)
+│   ├── versions.tf              # vancluever/acme provider
+│   ├── main.tf                  # Let's Encrypt Wildcard (*.snowfox.live) + LXC deployer
+│   ├── variables.tf             # Cloudflare token, domain, email
+│   ├── outputs.tf               # Issued certificate attributes
+│   └── terraform.tfvars.example # Credentials template
 ├── cloudflare/                  # Cloudflare Edge Infrastructure
 │   ├── versions.tf              # Cloudflare provider v4.x
 │   ├── main.tf                  # Worker script, KV namespace, WAF BD rule, DNS records
@@ -59,3 +65,16 @@ terraform init
 terraform plan
 terraform apply
 ```
+
+### 3. Wildcard TLS Certificate Issuance & Nginx Deployment
+```bash
+cd iac/terraform/acme-wildcard
+cp terraform.tfvars.example terraform.tfvars
+# Fill in cloudflare_api_token
+
+terraform init
+terraform plan
+terraform apply
+```
+*(Automatically registers with Let's Encrypt, creates DNS-01 verification TXT records on Cloudflare, deploys certs into LXC 201, and reloads Nginx).*
+
