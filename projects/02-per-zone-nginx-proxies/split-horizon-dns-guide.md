@@ -113,6 +113,16 @@ To allow clients on Home LAN (`192.168.1.0/24`) to route to `10.10.10.10` with s
      uci add_list dhcp.lan.dhcp_option='249,10.0.0.0/8,192.168.1.129'
      uci commit dhcp && /etc/init.d/dnsmasq reload
      ```
+   - Add persistent firewall4 srcnat masquerade rule in `/etc/nftables.d/20-proxmox-zones-masq.nft` to prevent asymmetric TCP state drops for Wi-Fi stations:
+     ```bash
+     cat <<'EOF' > /etc/nftables.d/20-proxmox-zones-masq.nft
+     chain srcnat_proxmox {
+         type nat hook postrouting priority 100; policy accept;
+         ip daddr 10.0.0.0/8 oifname "br-lan" masquerade
+     }
+     EOF
+     fw4 reload
+     ```
 
 2. **On OpenWrt Core Router VM (`192.168.1.129`):**
    - Permit bidirectional forwarding between `lan` (Home LAN) and `safe_internal` (`vmbr1`):
