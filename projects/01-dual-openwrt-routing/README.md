@@ -18,15 +18,15 @@
 
 ## 📂 Project Structure & References
 
-- 📘 **Runbook & Operations Guide:** [[lab/projects/01-dual-openwrt-routing/runbook|Routing Operations & wan-mode Runbook]]
-- 🛡️ **DNS Sinkhole & Parental Controls Subsystem:** [[../07-pihole-dns-sinkhole/README|Project 07: Pi-hole Out-of-Band DNS Sinkhole]]
+- 📘 **Runbook & Operations Guide:** [Routing Operations & wan-mode Runbook](runbook.md)
+- 🛡️ **DNS Sinkhole & Parental Controls Subsystem:** [Project 07: Pi-hole Out-of-Band DNS Sinkhole](../07-pihole-dns-sinkhole/README.md)
 - 📐 **Architectural Decision Records:**
-  - [[../../knowledge/architecture-decisions#ADR-005 Out-of-Band Pi-hole DNS Sinkhole and Strict Fallback Parental Controls|ADR-005: Out-of-Band Pi-hole & Parental Controls]]
-  - [[../../knowledge/architecture-decisions#ADR-006 Dedicated Database Tier vmbr7 and Zero-Trust Inter-Bridge Firewall Hardening|ADR-006: Dedicated Database Tier (vmbr7) & Inter-Bridge Firewall]]
-  - [[../../knowledge/architecture-decisions#15-wi-fi-parental-controls-via-mac-allowlist|ADR-002 §1.5: MAC Allowlist Architecture]]
+  - [ADR-005: Out-of-Band Pi-hole & Parental Controls](../../knowledge/architecture-decisions.md#adr-005-out-of-band-pi-hole-dns-sinkhole-and-strict-fallback-parental-controls)
+  - [ADR-006: Dedicated Database Tier (vmbr7) & Inter-Bridge Firewall](../../knowledge/architecture-decisions.md#adr-006-dedicated-database-tier-vmbr7-and-zero-trust-inter-bridge-firewall-hardening)
+  - [ADR-002 §1.5: MAC Allowlist Architecture](../../knowledge/architecture-decisions.md#15-wi-fi-parental-controls-via-mac-allowlist)
 - 🧪 **Experiments Log:**
-  - [[001-failover-wan|EXP-001: Dual OpenWrt WAN Failover with Metric Switching]]
-  - [[002-vlan-trunking|EXP-002: Single-Cable VLAN Trunking & Multi-Mode Dual PPPoE]]
-  - [[003-iot-vlan30-trunking|EXP-003: Single-Cable Multi-VLAN Trunking for Isolated IoT Wi-Fi (VLAN 30)]]
+  - [EXP-001: Dual OpenWrt WAN Failover with Metric Switching](experiments/001-failover-wan.md)
+  - [EXP-002: Single-Cable VLAN Trunking & Multi-Mode Dual PPPoE](experiments/002-vlan-trunking.md)
+  - [EXP-003: Single-Cable Multi-VLAN Trunking for Isolated IoT Wi-Fi (VLAN 30)](experiments/003-iot-vlan30-trunking.md)
 - 🔒 **Environment Configurations:**
-  - Central environment template: [[../../.env.example|Root .env.example]] (PPPoE credentials, DNS upstream hierarchy, hardware MAC addresses)
+  - Central environment template: [Root .env.example](../../.env.example) (PPPoE credentials, DNS upstream hierarchy, hardware MAC addresses)

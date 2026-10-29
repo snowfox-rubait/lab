@@ -1,7 +1,7 @@
 # Project 11: Multi-WAN Load Balancing (`mwan3`)
 
 > **Status:** Stage 1 Staged & Documented (Zero Downtime / Awaiting Off-Peak Maintenance Window)  
-> **Parent Architecture:** [[../01-dual-openwrt-routing/README|01-dual-openwrt-routing]] & [[../01-dual-openwrt-routing/experiments/002-vlan-trunking|EXP-002 VLAN Trunking]]  
+> **Parent Architecture:** [01-dual-openwrt-routing](../01-dual-openwrt-routing/README.md) & [EXP-002 VLAN Trunking](../01-dual-openwrt-routing/experiments/002-vlan-trunking.md)  
 > **Target Devices:** Physical TP-Link Archer C6 v3 (`192.168.1.1`) & Proxmox OpenWrt VM 100 (`192.168.1.129`)
 
 ---

@@ -3,7 +3,7 @@
 > **Node:** Proxmox VE LXC 210 (`10.70.70.10`)  
 > **Hypervisor Bridge:** Dedicated Database Tier (`vmbr7`)  
 > **Base OS:** Debian GNU/Linux 13 (Trixie) - *Direct 1:1 Host Kernel & ABI Parity*  
-> **Architectural Decisions:** [[../../knowledge/architecture-decisions#ADR-006 Dedicated Database Tier vmbr7 and Zero-Trust Inter-Bridge Firewall Hardening|ADR-006]] & [[../../knowledge/resource-planning-and-limits|Resource Planning]]
+> **Architectural Decisions:** [ADR-006](../../knowledge/architecture-decisions.md#adr-006-dedicated-database-tier-vmbr7-and-zero-trust-inter-bridge-firewall-hardening) & [Resource Planning](../../knowledge/resource-planning-and-limits.md)
 
 ---
 

@@ -69,7 +69,7 @@
 
 ## 🛡️ Future Parental Controls & Policy Restriction Roadmap
 
-The baseline infrastructure is live under [[../projects/07-pihole-dns-sinkhole/README|07-pihole-dns-sinkhole]] and [[architecture-decisions#ADR-005 Out-of-Band Pi-hole DNS Sinkhole and Strict Fallback Parental Controls|ADR-005]]. The following future restriction vectors are cataloged for upcoming implementation:
+The baseline infrastructure is live under [07-pihole-dns-sinkhole](../projects/07-pihole-dns-sinkhole/README.md) and [ADR-005](architecture-decisions.md#adr-005-out-of-band-pi-hole-dns-sinkhole-and-strict-fallback-parental-controls). The following future restriction vectors are cataloged for upcoming implementation:
 
 1. **Time-of-Day Internet Curfew (Scheduled Lockout):**
    - *Target:* Non-allowlisted family and repeater devices.
@@ -82,7 +82,7 @@ The baseline infrastructure is live under [[../projects/07-pihole-dns-sinkhole/R
    - *Mechanism:* Curated regex blocklists for social media (TikTok, Instagram, Facebook) and mobile gaming servers layered onto specific target devices.
 4. **Captive Portal Voucher Integration:**
    - *Target:* Guest devices.
-   - *Mechanism:* Convergence with [[../projects/04-monetized-captive-portal/README|04-monetized-captive-portal]] for time-limited session tokens.
+   - *Mechanism:* Convergence with [04-monetized-captive-portal](../projects/04-monetized-captive-portal/README.md) for time-limited session tokens.
 
 ---
 

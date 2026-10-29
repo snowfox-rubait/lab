@@ -5,12 +5,12 @@
 ---
 
 ## 📑 ADR Index
-- [[#ADR-001 Master Topology Refinement and Ingress Egress Realignment]] *(2026-10-23)*
-- [[#ADR-002 Fail-Safe Mode 1 Shutdown, Storage Bind Mounts, and Management Bots Zone]] *(2026-10-23)*
-- [[#ADR-003 Isolated Low-Power IoT Wireless Tier, MAC Allowlisting, and MQTT Telemetry Routing]] *(2026-10-23)*
-- [[#ADR-004 Live Node Zone Realignment, WAN Metric Priority, and Zero-Drift Standardization]] *(2026-10-23)*
-- [[#ADR-005 Out-of-Band Pi-hole DNS Sinkhole and Strict Fallback Parental Controls]] *(2026-10-24)*
-- [[#ADR-006 Dedicated Database Tier vmbr7 and Zero-Trust Inter-Bridge Firewall Hardening]] *(2026-10-24)*
+- [ADR-001 Master Topology Refinement and Ingress Egress Realignment](#adr-001-master-topology-refinement-and-ingress-egress-realignment) *(2026-10-23)*
+- [ADR-002 Fail-Safe Mode 1 Shutdown, Storage Bind Mounts, and Management Bots Zone](#adr-002-fail-safe-mode-1-shutdown-storage-bind-mounts-and-management-bots-zone) *(2026-10-23)*
+- [ADR-003 Isolated Low-Power IoT Wireless Tier, MAC Allowlisting, and MQTT Telemetry Routing](#adr-003-isolated-low-power-iot-wireless-tier-mac-allowlisting-and-mqtt-telemetry-routing) *(2026-10-23)*
+- [ADR-004 Live Node Zone Realignment, WAN Metric Priority, and Zero-Drift Standardization](#adr-004-live-node-zone-realignment-wan-metric-priority-and-zero-drift-standardization) *(2026-10-23)*
+- [ADR-005 Out-of-Band Pi-hole DNS Sinkhole and Strict Fallback Parental Controls](#adr-005-out-of-band-pi-hole-dns-sinkhole-and-strict-fallback-parental-controls) *(2026-10-24)*
+- [ADR-006 Dedicated Database Tier vmbr7 and Zero-Trust Inter-Bridge Firewall Hardening](#adr-006-dedicated-database-tier-vmbr7-and-zero-trust-inter-bridge-firewall-hardening) *(2026-10-24)*
 
 ---
 
@@ -110,7 +110,7 @@ Key architectural risks and challenges identified:
 
 #### 2.4 Telemetry Routing to Mosquitto MQTT (`vmbr3`)
 - **Decision:** Selected and implemented **Option A (802.1Q VLAN 30 Trunking)** over Option B (L3 routing):
-  - Extends the single-cable trunk architecture proven in [[002-vlan-trunking|EXP-002]] and fully specified in [[003-iot-vlan30-trunking|EXP-003]].
+  - Extends the single-cable trunk architecture proven in [EXP-002](../projects/01-dual-openwrt-routing/experiments/002-vlan-trunking.md) and fully specified in [EXP-003](../projects/01-dual-openwrt-routing/experiments/003-iot-vlan30-trunking.md).
   - Sub-interface `lan3.30` on Archer C6 is combined with the `snowfox-iot` VAP in a zero-IP Layer-2 bridge (`br-iot`).
   - Proxmox bridges `enp12s0.30` into `vmbr3`.
   - OpenWrt VM serves DHCP leases in `10.30.30.0/24` with static leases for `MAC_ESP32` (`10.30.30.10`) and `MAC_ESP8266` (`10.30.30.11`).
@@ -156,7 +156,7 @@ Key architectural risks and challenges identified:
 
 #### 1.5 Wi-Fi Parental Controls via MAC Allowlist
 - **Original Concept:** The physical router applies default content and time restrictions across the wireless network (affecting guest and parents' repeater devices), while authorized devices (Main PC, Phone, Laptop) are placed on an explicit Layer-2 MAC allowlist.
-- **Evolution & Implementation (ADR-005):** Fully designed, implemented, and verified in [[#ADR-005 Out-of-Band Pi-hole DNS Sinkhole and Strict Fallback Parental Controls|ADR-005]] and [[../projects/07-pihole-dns-sinkhole/README|Project 07: Pi-hole Out-of-Band DNS Sinkhole]].
+- **Evolution & Implementation (ADR-005):** Fully designed, implemented, and verified in [ADR-005](#adr-005-out-of-band-pi-hole-dns-sinkhole-and-strict-fallback-parental-controls) and [Project 07: Pi-hole Out-of-Band DNS Sinkhole](../projects/07-pihole-dns-sinkhole/README.md).
 - **Operational Policy:**
   - *Universal Baseline:* 100% of devices across the home (both allowlisted personal devices and family/guest devices) are bound to a strict baseline: **zero adult/NSFW content, zero adware/trackers, zero known malicious domains**.
   - *Tier Separation:* Allowlisted devices (`mac_allowlist`) are maintained as a distinct group in the Pi-hole database (Group 1) and are exempt from firewall anti-bypass port 53 redirection.
@@ -240,7 +240,7 @@ To avoid configuration drift between documentation and Proxmox `/etc/network/int
 ### 1. Context & Problem Statement
 Enforcing parental controls, adult website blocking, and ad/malware filtering across the physical home Wi-Fi network presented several key constraints:
 1. **Physical Router Hardware Limitations:** The TP-Link Archer C6 v3 gateway has only 16MB flash and 128MB RAM. Running on-router DNS blocklists (e.g., `adblock-fast` or `simple-adblock`) rapidly exhausts system RAM, causing memory pressure and triggering MediaTek MT7603E wireless driver kernel lockups.
-2. **Nightly Proxmox Power-Down Window:** Per [[#ADR-002 Fail-Safe Mode 1 Shutdown, Storage Bind Mounts, and Management Bots Zone|ADR-002]], the Proxmox hypervisor automatically shuts down between 00:00 (midnight) and 07:00 AM to conserve power and battery health. If DNS is solely hosted inside a hypervisor container, all home internet resolution dies when the server powers off.
+2. **Nightly Proxmox Power-Down Window:** Per [ADR-002](#adr-002-fail-safe-mode-1-shutdown-storage-bind-mounts-and-management-bots-zone), the Proxmox hypervisor automatically shuts down between 00:00 (midnight) and 07:00 AM to conserve power and battery health. If DNS is solely hosted inside a hypervisor container, all home internet resolution dies when the server powers off.
 3. **Client OS DNS Fallback Quirks:** Modern client operating systems (Android, iOS, Windows) do not treat multiple DHCP-advertised DNS servers as strict primary/secondary. Instead, they query both in parallel or round-robin, leaking unblocked queries if any unfiltered secondary DNS is advertised directly via DHCP.
 4. **Bypass Vectors on Client Devices:** Non-allowlisted devices (such as guest phones or repeater clients) can easily bypass DNS-based parental controls by manually configuring static DNS (e.g., `8.8.8.8` or `1.1.1.1`) in their Wi-Fi adapter settings, or by enabling Android "Private DNS" (DNS-over-TLS on port 853).
 

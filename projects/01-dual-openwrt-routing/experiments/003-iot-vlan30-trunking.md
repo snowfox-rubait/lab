@@ -22,7 +22,7 @@ Isolate physical IoT microcontrollers (ESP32 and ESP8266) onto a dedicated, low-
 ---
 
 ## 🔬 Hypothesis
-Building on the single-cable 802.1Q VLAN trunking proven in [[002-vlan-trunking|EXP-002]] (`lan3.100` for WAN passthrough):
+Building on the single-cable 802.1Q VLAN trunking proven in [EXP-002](002-vlan-trunking.md) (`lan3.100` for WAN passthrough):
 1. A secondary 802.1Q tag (`VLAN 30`) can be established on the same physical link between Archer C6 (`lan3.30`) and Proxmox (`enp12s0.30`).
 2. An isolated Virtual Access Point (VAP) on the Archer C6's 2.4GHz radio (`radio0`) with Layer-2 client isolation and hardware MAC allowlisting can be bridged directly into `lan3.30`.
 3. By setting `proto 'none'` on the physical router's bridge, the Archer C6 maintains zero IP presence on the IoT network, preventing microcontrollers from reaching the router's SSH or LuCI administration portals.

@@ -5,7 +5,7 @@
 > **Container ID:** Proxmox LXC 205 (`pihole-oob`)  
 > **Network Location:** `192.168.1.135` on `vmbr0` (Home LAN / Out-of-Band)  
 > **Web Admin Interface:** `http://192.168.1.135/admin`  
-> **Architectural Decision Record:** [[../../knowledge/architecture-decisions#ADR-005 Out-of-Band Pi-hole DNS Sinkhole and Strict Fallback Parental Controls|ADR-005]]
+> **Architectural Decision Record:** [ADR-005](../../knowledge/architecture-decisions.md#adr-005-out-of-band-pi-hole-dns-sinkhole-and-strict-fallback-parental-controls)
 
 ---
 
@@ -150,4 +150,4 @@ While the current policy enforces a uniform baseline across the entire household
 ## 📖 Operational Runbook Reference
 
 For day-to-day administration, gravity updates, client-group database queries, and troubleshooting procedures, see the companion runbook:
-- 📘 [[runbook|Pi-hole Operations & Maintenance Runbook]]
+- 📘 [Pi-hole Operations & Maintenance Runbook](runbook.md)

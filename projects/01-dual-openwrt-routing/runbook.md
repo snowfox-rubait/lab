@@ -29,7 +29,7 @@ Because the ThinkPad cuts off mechanical power to internal RTC wake pins in ACPI
 
 ## 🔀 Multi-Mode WAN Controller & Watchdog (`wan-mode`)
 
-The router features a unified mode switcher located at `/usr/bin/wan-mode` (source tracked in repo under [[scripts/wan-mode|scripts/wan-mode]]).
+The router features a unified mode switcher located at `/usr/bin/wan-mode` (source tracked in repo under [scripts/wan-mode](scripts/wan-mode)).
 
 ### Quick Commands:
 ```bash
@@ -57,7 +57,7 @@ When `wan-mode 2` is triggered:
 
 ## 🖥️ WebUI WAN Controller Dashboard (LXC 200: `wan-controller`)
 
-A dedicated container sits on the Home bridge (`vmbr0`) running Nginx and an interactive dashboard for checking telemetry and toggling WAN modes (source files tracked in repo under [[wan-controller/app.py|wan-controller/app.py]], [[wan-controller/wan-webui.service|wan-webui.service]], and [[wan-controller/nginx-site.conf|nginx-site.conf]]):
+A dedicated container sits on the Home bridge (`vmbr0`) running Nginx and an interactive dashboard for checking telemetry and toggling WAN modes (source files tracked in repo under [wan-controller/app.py](wan-controller/app.py), [wan-webui.service](wan-controller/wan-webui.service), and [nginx-site.conf](wan-controller/nginx-site.conf)):
 
 - **Access URL:** **`http://192.168.1.130/`**
 - **Container Specs:** Debian 12 LXC (ID 200, 1 Core, 512MB RAM, 4GB disk)
@@ -71,8 +71,8 @@ A dedicated container sits on the Home bridge (`vmbr0`) running Nginx and an int
 
 ## 🛡️ Wi-Fi Restrictions, Parental Controls & Anti-Bypass Firewall
 
-> **Dedicated Project Documentation:** [[../07-pihole-dns-sinkhole/README|07-pihole-dns-sinkhole]]  
-> **Architectural Decision Reference:** [[../../knowledge/architecture-decisions#ADR-005 Out-of-Band Pi-hole DNS Sinkhole and Strict Fallback Parental Controls|ADR-005]] and [[../../knowledge/architecture-decisions#15-wi-fi-parental-controls-via-mac-allowlist|ADR-002 §1.5]]
+> **Dedicated Project Documentation:** [07-pihole-dns-sinkhole](../07-pihole-dns-sinkhole/README.md)  
+> **Architectural Decision Reference:** [ADR-005](../../knowledge/architecture-decisions.md#adr-005-out-of-band-pi-hole-dns-sinkhole-and-strict-fallback-parental-controls) and [ADR-002 §1.5](../../knowledge/architecture-decisions.md#15-wi-fi-parental-controls-via-mac-allowlist)
 
 To enforce adult content blocking, ad filtering, and malware protection across the entire physical Wi-Fi network (including parents' repeaters and guest clients) without overloading the router's 16MB flash/128MB RAM:
 

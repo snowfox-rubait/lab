@@ -3,7 +3,7 @@
 > **Project ID:** `02-per-zone-nginx-proxies`  
 > **Status:** Phase 1 Completed (`wan-controller` on `vmbr0`)  
 > **Architecture Principle:** Strict Network Segmentation via Isolated Reverse Proxies with Independent Out-of-Band Physical Management  
-> **Authoritative ADR:** [[lab/knowledge/architecture-decisions#ADR-001 Master Topology Refinement and Ingress Egress Realignment|ADR-001 (Master Topology & Bridges)]]
+> **Authoritative ADR:** [ADR-001 (Master Topology & Bridges)](../../knowledge/architecture-decisions.md#adr-001-master-topology-refinement-and-ingress-egress-realignment)
 
 ---
 

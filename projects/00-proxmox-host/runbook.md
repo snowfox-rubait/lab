@@ -64,7 +64,7 @@ Because this server is a laptop running with the lid closed, standard Linux powe
 
 ## 🌙 Automated Nightly Schedule & Battery Protection
 
-Managed by `/usr/local/bin/power-manager.sh` and `/etc/cron.d/power-manager` (tracked in repo under [[scripts/power-manager.sh|scripts/power-manager.sh]] and [[services/power-manager.cron|services/power-manager.cron]]).
+Managed by `/usr/local/bin/power-manager.sh` and `/etc/cron.d/power-manager` (tracked in repo under [scripts/power-manager.sh](scripts/power-manager.sh) and [services/power-manager.cron](services/power-manager.cron)).
 
 ### Rules Configured:
 1. **Low Battery Auto-Shutdown (< 40% and Discharging):**
@@ -193,8 +193,8 @@ For deep post-mortem analysis of startup timing, masquerade edge cases, and hist
 
 ## 🛡️ Out-of-Band Pi-hole DNS Sinkhole (LXC 205: `pihole-oob`)
 
-> **Dedicated Project Documentation:** [[../07-pihole-dns-sinkhole/README|07-pihole-dns-sinkhole]]  
-> **Operations Runbook:** [[../07-pihole-dns-sinkhole/runbook|Pi-hole Runbook]]
+> **Dedicated Project Documentation:** [07-pihole-dns-sinkhole](../07-pihole-dns-sinkhole/README.md)  
+> **Operations Runbook:** [Pi-hole Runbook](../07-pihole-dns-sinkhole/runbook.md)
 
 To provide network-wide parental controls, adult website blocking, and ad filtering without overloading the physical router's limited RAM/flash, a dedicated Pi-hole instance runs directly on the Out-of-Band management bridge (`vmbr0`).
 
