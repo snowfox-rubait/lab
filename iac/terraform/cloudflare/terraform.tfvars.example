@@ -1,0 +1,7 @@
+# Copy to terraform.tfvars and populate with your credentials
+cloudflare_api_token   = "your_cloudflare_api_token"
+cloudflare_account_id   = "your_cloudflare_account_id"
+cloudflare_zone_id      = "your_cloudflare_zone_id"
+domain                  = "snowfox.live"
+short_domain            = "short.snowfox.live"
+shortener_secret_token  = "generate_with_openssl_rand_hex_24"

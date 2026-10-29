@@ -78,15 +78,53 @@ When hosting internal homelab portals (Proxmox, Gitea, n8n, Pi-hole, LuCI), stan
 On your Proxmox host (`192.168.1.2`):
 ```bash
 # Create Debian 13 LXC 201 attached to vmbr1 (Safe Internal)
-pct create 201 local:vztmpl/debian-13-standard_13.0-1_amd64.tar.zst \
+pct create 201 local:vztmpl/debian-13-standard_13.6-1_amd64.tar.zst \
   --hostname nginx-safe \
   --cores 1 \
   --memory 512 \
   --swap 512 \
   --net0 name=eth0,bridge=vmbr1,ip=10.10.10.10/24,gw=10.10.10.1 \
+  --nameserver "192.168.1.135 1.1.1.1" \
   --features nesting=1 \
+  --unprivileged 1 \
+  --onboot 1 \
+  --rootfs local-lvm:4 \
+  --ssh-public-keys /root/.ssh/authorized_keys \
   --start 1
 ```
+
+---
+
+### Step 2.1: Inter-Bridge Routing & Firewall Interconnection
+To allow clients on Home LAN (`192.168.1.0/24`) to route to `10.10.10.10` with sub-2ms latency:
+
+1. **On Physical Router (`192.168.1.1`):**
+   - Add kernel static route for Proxmox zones via OpenWrt VM (`192.168.1.129`):
+     ```bash
+     uci set network.route_proxmox_zones=route
+     uci set network.route_proxmox_zones.interface='lan'
+     uci set network.route_proxmox_zones.target='10.0.0.0/8'
+     uci set network.route_proxmox_zones.gateway='192.168.1.129'
+     uci commit network && /etc/init.d/network reload
+     ```
+   - Advertise RFC 3442 Classless Static Routes via DHCP options 121 and 249 so all LAN/Wi-Fi clients learn the route:
+     ```bash
+     uci add_list dhcp.lan.dhcp_option='121,10.0.0.0/8,192.168.1.129'
+     uci add_list dhcp.lan.dhcp_option='249,10.0.0.0/8,192.168.1.129'
+     uci commit dhcp && /etc/init.d/dnsmasq reload
+     ```
+
+2. **On OpenWrt Core Router VM (`192.168.1.129`):**
+   - Permit bidirectional forwarding between `lan` (Home LAN) and `safe_internal` (`vmbr1`):
+     ```bash
+     uci set firewall.fwd_safe_lan=forwarding
+     uci set firewall.fwd_safe_lan.src='safe_internal'
+     uci set firewall.fwd_safe_lan.dest='lan'
+     uci add firewall forwarding
+     uci set firewall.@forwarding[-1].src='lan'
+     uci set firewall.@forwarding[-1].dest='safe_internal'
+     uci commit firewall && /etc/init.d/firewall reload
+     ```
 
 ---
 
@@ -152,7 +190,11 @@ uci commit dhcp
 
 ### Step 6: Configure Pi-hole (Out-of-Band DNS Sinkhole)
 On LXC 205 (`192.168.1.135`):
-Add the records to `/etc/dnsmasq.d/05-custom-snowfox.conf`:
+1. Enable `etc_dnsmasq_d` in `/etc/pihole/pihole.toml` so Pi-hole v6 reads drop-in configuration files:
+   ```bash
+   sed -i 's/etc_dnsmasq_d = false/etc_dnsmasq_d = true/' /etc/pihole/pihole.toml
+   ```
+2. Add the records to `/etc/dnsmasq.d/05-custom-snowfox.conf`:
 ```text
 rebind-domain-ok=/snowfox.live/
 address=/pve.snowfox.live/10.10.10.10
@@ -162,11 +204,13 @@ address=/pihole.snowfox.live/10.10.10.10
 address=/gitea.snowfox.live/10.10.10.10
 address=/n8n.snowfox.live/10.10.10.10
 address=/short-admin.snowfox.live/10.10.10.10
+address=/photos.snowfox.live/10.10.10.10
 address=/ha.snowfox.live/10.10.10.10
+address=/internal.snowfox.live/10.10.10.10
 ```
-Restart DNS engine:
+3. Restart DNS engine:
 ```bash
-pihole-FTL --restart
+systemctl restart pihole-FTL
 ```
 
 ---

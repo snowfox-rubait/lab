@@ -103,16 +103,9 @@
 
 ---
 
-### 2.2 `mwan3` Subnet Range Overlap & Inter-Zone Routing
-- **Current State:** In [mwan3.config.router](file:///home/test/Documents/Obsidian Vault/lab/projects/11-multiwan-load-balancing/mwan3.config.router), rule `local_subnets` excludes `192.168.1.0/24,10.0.0.0/8,172.16.0.0/12` using policy `default`.
-- **The Issue:** Traffic routed to `wan_vm` uses gateway `192.168.1.129` on `br-lan`. If internal services on the physical router attempt to communicate with containers in `10.10.10.0/24` or `10.70.70.0/24`, the physical router must have explicit static routes pointing `10.0.0.0/8` to `192.168.1.129`. Otherwise, `policy 'default'` sends packets to the unrouted default interface.
-- **Recommended Fix:** Ensure static routes for `10.0.0.0/8` via `192.168.1.129` are defined on the physical router:
-  ```uci
-  set network.route_proxmox_zones=route
-  set network.route_proxmox_zones.interface='lan'
-  set network.route_proxmox_zones.target='10.0.0.0/8'
-  set network.route_proxmox_zones.gateway='192.168.1.129'
-  ```
+### 2.2 `mwan3` Subnet Range Overlap & Inter-Zone Routing [RESOLVED]
+- **Current State:** Static route `route_proxmox_zones` (`10.0.0.0/8 via 192.168.1.129 dev br-lan`) and RFC 3442 DHCP options 121 & 249 have been committed and verified active on the physical router (`192.168.1.1`).
+- **Resolution:** Home LAN devices and physical router services route directly to `10.0.0.0/8` Proxmox container tiers without being routed out `pppoe-wan`. Bidirectional forwarding on OpenWrt VM between `lan` and `safe_internal` confirmed with ~1.4ms latency.
 
 ---
 

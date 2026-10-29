@@ -115,6 +115,7 @@ The HP EliteDesk Mini PC currently runs several local services:
 | **Pi-hole Container (LXC 205 `eth0`)** | `MAC_PIHOLE_OOB` | `192.168.1.135` | Out-of-Band DNS Sinkhole (Allowlisted) |
 | **OpenWrt VM (VM 100 `eth0`)** | `MAC_OPENWRT_VM` | `192.168.1.129` | Virtual Core Router LAN Interface (Allowlisted) |
 | **WAN Controller (LXC 200 `eth0`)** | `MAC_LXC_WAN_CONTROLLER` | `192.168.1.130` | Fail-safe Out-of-Band Dashboard (Allowlisted) |
+| **Safe Internal Proxy (LXC 201 `eth0`)** | `MAC_LXC_NGINX_SAFE` | `10.10.10.10` | Split-Horizon TLS Proxy (`vmbr1`) |
 | **ESP32 Dev Board** | `MAC_ESP32` | `10.30.30.10` / Dynamic | IoT Sensor / ESPHome Node (VLAN 30) |
 | **ESP8266 Dev Board** | `MAC_ESP8266` | `10.30.30.11` / Dynamic | IoT Sensor Node (VLAN 30) |
 
