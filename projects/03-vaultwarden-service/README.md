@@ -36,7 +36,8 @@ Vaultwarden is our self-hosted, Bitwarden-compatible password manager. Because i
        ├── location /admin { 
        │       allow 192.168.1.197;    # Admin Workstation
        │       allow 10.10.10.0/24;     # Safe Management Zone
-       │       deny all;                # Returns 403 Forbidden to any tunnel/untrusted IP
+       │       error_page 403 =404 @notfound;
+       │       deny all;                # Returns stealth 404 Not Found to any tunnel/untrusted IP
        │       proxy_pass https://10.20.20.11:8443;
        │   }
        │

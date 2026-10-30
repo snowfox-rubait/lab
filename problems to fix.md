@@ -18,24 +18,9 @@
 
 ## 1. Confirmed Technical Errors & Inconsistencies
 
-### 1.1 Inconsistent Admin Lockdown Behavior in Vaultwarden Docs vs. Nginx Config
-- **Current State:** 
-  - [03-vaultwarden-service/README.md](file:///home/test/Documents/Obsidian Vault/lab/projects/03-vaultwarden-service/README.md) states that `/admin` returns an unconditional hard `404 Not Found` to public callers.
-  - [cloudflare-live-status.md](file:///home/test/Documents/Obsidian Vault/lab/projects/03-vaultwarden-service/cloudflare-live-status.md) and [migration-report.md](file:///home/test/Documents/Obsidian Vault/lab/projects/03-vaultwarden-service/migration-report.md) report that it returns `403 Forbidden`.
-  - In [nginx-public.conf](file:///home/test/Documents/Obsidian Vault/lab/projects/02-per-zone-nginx-proxies/nginx-public.conf), Nginx uses `deny all;` inside `location /admin`, which causes Nginx to return `403 Forbidden` by default.
-- **Underlying Intent:** Conceal or strictly prevent public internet access to the `/admin` portal while allowing access exclusively from the administrator's workstation (`192.168.1.197`) or internal management tier (`10.10.10.0/24`).
-- **Technical Impact:** A `403 Forbidden` response confirms to automated scanners that the `/admin` endpoint exists, whereas a `404 Not Found` provides stealth. Furthermore, the documented private `:8443` server block for admin management is missing from `nginx-public.conf`.
-- **Recommended Fix:** 
-  - Decide on the canonical response (`404` vs. `403`).
-  - If `404` is preferred, update `nginx-public.conf`:
-    ```nginx
-    location /admin {
-        allow 192.168.1.197;
-        allow 10.10.10.0/24;
-        return 404;
-    }
-    ```
-  - Align all documentation files with the implemented behavior.
+### 1.1 Inconsistent Admin Lockdown Behavior in Vaultwarden Docs vs. Nginx Config [RESOLVED]
+- **Current State:** [nginx-public.conf](file:///home/test/Documents/Obsidian Vault/lab/projects/02-per-zone-nginx-proxies/nginx-public.conf) restricts `/admin` to `192.168.1.197` and `10.10.10.0/24`.
+- **Resolution:** Deployed `error_page 403 =404 @notfound;` with an internal `@notfound` handler in `nginx-public.conf` on LXC 202. Unauthorized external callers through Cloudflare Tunnel receive a stealth `404 Not Found`, while authorized workstation and internal management IPs pass directly to Vaultwarden (`:8443`). Config verified and synced across documentation.
 
 ---
 
@@ -130,12 +115,12 @@
 | 🟡 **P2** | Fix Dropbear & Pi-hole SSH authentication | `iac/inventory.py`, router, LXC 205 | Enable automated non-interactive Pyinfra execution | 🟢 **Fixed & Verified** |
 | 🟡 **P2** | Enable `ksmtuned` RAM deduplication on Proxmox | Proxmox Host (`/etc/ksmtuned.conf`) | Reclaim 20%–35% memory on 8GB host | 🟢 **Active & Verified** |
 | 🟢 **P3** | Evaluate nighttime DNS upstream latency | Physical Router `/etc/config/dhcp` | Query measured at 57ms (no fallback penalty) | 🟢 **Audit Passed (57ms)** |
-| 🟢 **P3** | Offload Bot Hub (Project 06/09) to Proxmox/n8n | `projects/06-openwrt-telegram-bot/`, `projects/09-telegram-bot-hub/` | Conserve 16MB SPI flash on Archer C6 | ⚪ Roadmap Target |
+| 🟢 **P3** | Offload Bot Hub (Project 06/09) to Proxmox/n8n | `projects/06-openwrt-telegram-bot/`, `projects/09-telegram-bot-hub/` | Conserve 16MB SPI flash on Archer C6 | 🟢 **Architecture Confirmed** |
 
 ---
 
 ## 5. Open Decisions Requiring Clarification
 
-1. **Admin Portal Response Policy:** Should public requests to `vault.snowfox.live/admin` return a stealth `404 Not Found` (recommended) or an explicit `403 Forbidden`?
+1. **Admin Portal Response Policy [RESOLVED]:** Configured stealth `404 Not Found` for unauthorized external callers using `error_page 403 =404 @notfound;` in `nginx-public.conf` on LXC 202. Authorized workstation (`192.168.1.197`) accesses admin cleanly.
 2. **Nighttime DNS Latency:** Should we implement an automated midnight cron on the router to swap primary DNS to Cloudflare Family (`1.1.1.3`) during the sleep window, or is the 2.5s fallback delay acceptable?
 3. **ISP Dual-Login Status:** Does your current ISP account permit simultaneous PPPoE logins for Mode 3, or will a secondary account be required?

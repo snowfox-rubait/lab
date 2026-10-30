@@ -305,7 +305,8 @@ HTML_PAGE = """<!DOCTYPE html>
           showAlert("Short link generated successfully and active on Cloudflare Edge!", "success");
           fetchLinks(); // Refresh background cache
         } else {
-          showAlert(data.error || "Failed to create short link.", "error");
+          const errMsg = data.details ? `${data.error} (${data.details})` : (data.error || "Failed to create short link.");
+          showAlert(errMsg, "error");
         }
       } catch (err) {
         showAlert("Network error connecting to management daemon: " + err.message, "error");
@@ -330,7 +331,8 @@ HTML_PAGE = """<!DOCTYPE html>
           renderLinksTable(allLinks);
           if (manual) showAlert("Registry synchronized with Cloudflare KV.", "success");
         } else {
-          showAlert(data.error || "Failed to fetch registry.", "error");
+          const errMsg = data.details ? `${data.error} (${data.details})` : (data.error || "Failed to fetch registry.");
+          showAlert(errMsg, "error");
         }
       } catch (err) {
         showAlert("Error loading links: " + err.message, "error");
@@ -402,7 +404,8 @@ HTML_PAGE = """<!DOCTYPE html>
           showAlert(`Short link '/${slug}' successfully removed from Cloudflare KV.`, "success");
           fetchLinks();
         } else {
-          showAlert(data.error || "Failed to delete link.", "error");
+          const errMsg = data.details ? `${data.error} (${data.details})` : (data.error || "Failed to delete link.");
+          showAlert(errMsg, "error");
         }
       } catch (err) {
         showAlert("Error deleting link: " + err.message, "error");
@@ -528,8 +531,12 @@ class ShortManagerHandler(http.server.BaseHTTPRequestHandler):
                 self.send_raw_response(resp.status, "application/json", data)
         except urllib.error.HTTPError as e:
             err_data = e.read()
+            sys.stderr.write(f"[ERROR] POST {target_url} returned HTTP {e.code}: {err_data.decode('utf-8', 'ignore')}\n")
+            sys.stderr.flush()
             self.send_raw_response(e.code, "application/json", err_data)
         except Exception as e:
+            sys.stderr.write(f"[ERROR] POST {target_url} failed: {e}\n")
+            sys.stderr.flush()
             self.send_json_response(502, {"error": f"Failed to connect to Cloudflare Worker: {str(e)}"})
 
     def handle_api_proxy_get(self):
@@ -546,8 +553,12 @@ class ShortManagerHandler(http.server.BaseHTTPRequestHandler):
                 self.send_raw_response(resp.status, "application/json", data)
         except urllib.error.HTTPError as e:
             err_data = e.read()
+            sys.stderr.write(f"[ERROR] GET {target_url} returned HTTP {e.code}: {err_data.decode('utf-8', 'ignore')}\n")
+            sys.stderr.flush()
             self.send_raw_response(e.code, "application/json", err_data)
         except Exception as e:
+            sys.stderr.write(f"[ERROR] GET {target_url} failed: {e}\n")
+            sys.stderr.flush()
             self.send_json_response(502, {"error": f"Failed to reach Cloudflare Worker: {str(e)}"})
 
     def handle_api_proxy_delete(self):
@@ -581,8 +592,12 @@ class ShortManagerHandler(http.server.BaseHTTPRequestHandler):
                 self.send_raw_response(resp.status, "application/json", data)
         except urllib.error.HTTPError as e:
             err_data = e.read()
+            sys.stderr.write(f"[ERROR] DELETE {target_url} returned HTTP {e.code}: {err_data.decode('utf-8', 'ignore')}\n")
+            sys.stderr.flush()
             self.send_raw_response(e.code, "application/json", err_data)
         except Exception as e:
+            sys.stderr.write(f"[ERROR] DELETE {target_url} failed: {e}\n")
+            sys.stderr.flush()
             self.send_json_response(502, {"error": f"Failed to reach Cloudflare Worker: {str(e)}"})
 
     def send_html_response(self, status, content):

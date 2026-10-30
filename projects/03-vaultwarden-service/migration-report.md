@@ -118,7 +118,7 @@
 ## 🏆 Current Production Verification
 
 - **Public HTTPS Access:** `curl -I https://vault.snowfox.live/` $\rightarrow$ **`HTTP/2 200 OK`**
-- **Admin Protection:** `curl -I https://vault.snowfox.live/admin` $\rightarrow$ **`HTTP/2 403 Forbidden`**
+- **Admin Protection:** `curl -I https://vault.snowfox.live/admin` $\rightarrow$ **`HTTP/2 404 Not Found`** (Stealth lockdown via Nginx `error_page 403 =404 @notfound;`)
 - **Strict Transport Security:** `Strict-Transport-Security: max-age=31536000` active.
 - **Local Workstation Docker:** Stopped (`vaultwarden` and `vaultwarden_caddy` offline).
 

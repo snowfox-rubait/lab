@@ -7,6 +7,7 @@ Type=simple
 User=root
 WorkingDirectory=/opt/short-manager
 EnvironmentFile=/opt/short-manager/.env
+Environment=PYTHONUNBUFFERED=1
 ExecStart=/usr/bin/python3 /opt/short-manager/app.py
 Restart=always
 RestartSec=3

@@ -18,7 +18,7 @@
 3. **Application & WebSocket Reverse Proxy:**
    - Proxies traffic cleanly to **LXC 220** (`vaultwarden` at `10.20.20.11:8443` HTTPS via internal Homelab Root CA).
 4. **Admin Panel Lockdown (`/admin`):**
-   - Verified returning `HTTP/2 403 Forbidden` from external network. Reachable strictly from local workstation (`192.168.1.197`).
+   - Verified returning `HTTP/2 404 Not Found` (stealth lockdown) from external network. Reachable strictly from local workstation (`192.168.1.197`).
 5. **Backend Database Isolation & Multi-Tenancy:**
    - Vaultwarden queries the central PostgreSQL 17 cluster in **LXC 210** (`db-central` on `vmbr7` at `10.70.70.10:5432`) over internal mTLS.
    - Serving 3 verified active production users (`Snowfox` + 2 onboarded users) with 135 total organized ciphers.
