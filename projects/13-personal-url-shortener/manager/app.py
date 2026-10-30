@@ -18,6 +18,11 @@ import sys
 import datetime
 import re
 
+try:
+    import backup
+except ImportError:
+    backup = None
+
 PORT = int(os.environ.get("PORT", 8080))
 HOST = os.environ.get("HOST", "0.0.0.0")
 CLOUDFLARE_WORKER_URL = os.environ.get("CLOUDFLARE_WORKER_URL", "https://short.snowfox.live").rstrip("/")
@@ -218,9 +223,11 @@ HTML_PAGE = """<!DOCTYPE html>
     <main id="page-registry" class="card" style="display: none;">
       <div class="table-actions">
         <h2 class="card-title" style="margin-bottom:0;">📋 Shortened Links Registry</h2>
-        <div style="display:flex; gap:0.5rem; align-items:center;">
+        <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
           <input type="text" id="search-box" class="search-input" placeholder="🔍 Filter links..." oninput="filterLinks()">
           <button class="btn btn-secondary" onclick="fetchLinks(true)">🔄 Refresh</button>
+          <button class="btn btn-secondary" id="btn-backup-now" onclick="triggerManualBackup()">💾 Backup Now</button>
+          <a href="/api/backup/download" class="btn btn-secondary" style="text-decoration:none; display:inline-flex; align-items:center; font-size:0.875rem;" download="short_links_latest.json">⬇️ Export JSON</a>
         </div>
       </div>
 
@@ -243,6 +250,12 @@ HTML_PAGE = """<!DOCTYPE html>
       <div id="empty-state" class="empty-state" style="display: none;">
         No shortened links found. Create your first link in the Generator!
       </div>
+
+      <!-- Backup Status Row -->
+      <div id="backup-status-row" style="margin-top: 1.25rem; padding-top: 0.75rem; border-top: 1px solid var(--border); font-size: 0.75rem; color: var(--muted); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+        <span id="backup-status-text">💾 Automated Backup: Checking status...</span>
+        <span>Storage: <code>/var/backups/short-links</code> (SQLite + JSON · 30d retention)</span>
+      </div>
     </main>
   </div>
 
@@ -262,6 +275,7 @@ HTML_PAGE = """<!DOCTYPE html>
         btnGen.classList.remove("active");
         btnReg.classList.add("active");
         fetchLinks();
+        loadBackupStatus();
       } else {
         pageGen.style.display = "block";
         pageReg.style.display = "none";
@@ -454,8 +468,51 @@ HTML_PAGE = """<!DOCTYPE html>
       return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
     }
 
+    async function loadBackupStatus() {
+      try {
+        const res = await fetch("/api/backup/status");
+        if (res.ok) {
+          const st = await res.json();
+          const el = document.getElementById("backup-status-text");
+          if (st.last_run) {
+            const runDate = new Date(st.last_run.run_at);
+            const timeStr = runDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const dateStr = runDate.toLocaleDateString();
+            el.innerHTML = `💾 Local Snapshot: <strong>${st.total_active_links} active links</strong> backed up on ${dateStr} at ${timeStr} (${st.total_snapshots} snapshots saved)`;
+          } else {
+            el.innerText = "💾 Local Snapshot: No snapshots recorded yet";
+          }
+        }
+      } catch (err) {
+        console.error("Backup status load error:", err);
+      }
+    }
+
+    async function triggerManualBackup() {
+      const btn = document.getElementById("btn-backup-now");
+      const origText = btn.innerText;
+      btn.disabled = true;
+      btn.innerText = "⏳ Backing up...";
+      try {
+        const res = await fetch("/api/backup/run", { method: "POST" });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showAlert(`Snapshot created! Saved to ${data.snapshot_path}`, "success");
+          loadBackupStatus();
+        } else {
+          showAlert(`Backup failed: ${data.error || "Unknown error"}`, "error");
+        }
+      } catch (err) {
+        showAlert(`Backup network error: ${err.message}`, "error");
+      } finally {
+        btn.disabled = false;
+        btn.innerText = origText;
+      }
+    }
+
     // Initial load
     fetchLinks();
+    loadBackupStatus();
   </script>
 </body>
 </html>
@@ -487,6 +544,40 @@ class ShortManagerHandler(http.server.BaseHTTPRequestHandler):
             self.handle_api_proxy_get()
             return
 
+        # API: Backup status
+        if url.path == "/api/backup/status":
+            if backup:
+                st = backup.get_backup_status()
+                self.send_json_response(200, st)
+            else:
+                self.send_json_response(503, {"error": "Backup module unavailable"})
+            return
+
+        # API: Download latest backup JSON
+        if url.path == "/api/backup/download":
+            latest_path = "/var/backups/short-links/latest.json"
+            if not os.path.exists(latest_path) and backup:
+                try:
+                    backup.run_backup()
+                except Exception as e:
+                    self.send_json_response(500, {"error": f"Failed to generate backup: {str(e)}"})
+                    return
+            if os.path.exists(latest_path):
+                try:
+                    with open(latest_path, "rb") as f:
+                        content = f.read()
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Content-Disposition", 'attachment; filename="short_links_latest.json"')
+                    self.send_header("Content-Length", str(len(content)))
+                    self.end_headers()
+                    self.wfile.write(content)
+                except Exception as e:
+                    self.send_json_response(500, {"error": f"Error reading backup file: {str(e)}"})
+            else:
+                self.send_json_response(404, {"error": "No backup snapshot found"})
+            return
+
         # Serve UI for root or /links
         if url.path in ["/", "/links", "/generator"]:
             self.send_html_response(200, HTML_PAGE)
@@ -505,6 +596,18 @@ class ShortManagerHandler(http.server.BaseHTTPRequestHandler):
         # API: Delete link
         if url.path == "/api/delete":
             self.handle_api_proxy_delete()
+            return
+
+        # API: Trigger immediate backup
+        if url.path == "/api/backup/run":
+            if backup:
+                try:
+                    res = backup.run_backup()
+                    self.send_json_response(200, res)
+                except Exception as e:
+                    self.send_json_response(500, {"error": f"Backup failed: {str(e)}"})
+            else:
+                self.send_json_response(503, {"error": "Backup module unavailable"})
             return
 
         self.send_error(404, "Endpoint Not Found")

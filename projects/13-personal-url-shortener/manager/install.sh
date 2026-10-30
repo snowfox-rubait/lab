@@ -32,6 +32,13 @@ echo "[*] Copying application files..."
 cp app.py "${INSTALL_DIR}/app.py"
 chmod +x "${INSTALL_DIR}/app.py"
 
+if [ -f backup.py ]; then
+  cp backup.py "${INSTALL_DIR}/backup.py"
+  chmod +x "${INSTALL_DIR}/backup.py"
+fi
+
+mkdir -p /var/backups/short-links/snapshots
+
 if [ ! -f "${INSTALL_DIR}/.env" ]; then
   if [ -f .env ]; then
     cp .env "${INSTALL_DIR}/.env"
@@ -43,8 +50,18 @@ if [ ! -f "${INSTALL_DIR}/.env" ]; then
 fi
 
 # Install systemd service
-echo "[*] Configuring systemd service..."
+echo "[*] Configuring systemd services and timers..."
 cp "${SERVICE_NAME}" "/etc/systemd/system/${SERVICE_NAME}"
+
+if [ -f short-links-backup.service ]; then
+  cp short-links-backup.service /etc/systemd/system/short-links-backup.service
+fi
+if [ -f short-links-backup.timer ]; then
+  cp short-links-backup.timer /etc/systemd/system/short-links-backup.timer
+  systemctl enable short-links-backup.timer
+  systemctl restart short-links-backup.timer
+fi
+
 systemctl daemon-reload
 systemctl enable "${SERVICE_NAME}"
 systemctl restart "${SERVICE_NAME}"

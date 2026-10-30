@@ -1,0 +1,14 @@
+[Unit]
+Description=Daily and Catch-up Backup for Snowfox Personal Short Links
+
+[Timer]
+# Run twice daily: 08:30 (morning) and 20:30 (evening)
+OnCalendar=*-*-* 08:30:00
+OnCalendar=*-*-* 20:30:00
+# Ensure missed backups (e.g. during nightly power shutdown) trigger immediately on boot
+Persistent=true
+RandomizedDelaySec=60
+Unit=short-links-backup.service
+
+[Install]
+WantedBy=timers.target

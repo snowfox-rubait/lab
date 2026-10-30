@@ -217,8 +217,11 @@ export default {
   - Script: [`worker/worker.js`](worker/worker.js) (BD geo-fencing + KV redirect + token API)
   - Wrangler Config: [`worker/wrangler.toml`](worker/wrangler.toml) (KV bindings and routing)
   - Deployment Helper: [`worker/setup.sh`](worker/setup.sh)
-- **Safe Internal Web UI (`vmbr1`):**
-  - Application Daemon: [`manager/app.py`](manager/app.py) (Zero-dependency Python 3 HTTP server + SPA frontend)
+- **Safe Internal Web UI & Backup Engine (`vmbr1`):**
+  - Application Daemon: [`manager/app.py`](manager/app.py) (Zero-dependency Python 3 HTTP server + SPA frontend + backup API)
+  - Backup & Archival Engine: [`manager/backup.py`](manager/backup.py) (KV snapshot exporter, SQLite sync, soft-deletion tracking)
+  - Backup Service: [`manager/short-links-backup.service`](manager/short-links-backup.service) (Systemd oneshot unit)
+  - Backup Timer: [`manager/short-links-backup.timer`](manager/short-links-backup.timer) (Twice-daily catchup timer)
   - Service Configuration: [`manager/short-manager.service`](manager/short-manager.service)
   - Environment Template: [`manager/.env.example`](manager/.env.example)
   - Automated LXC Installer: [`manager/install.sh`](manager/install.sh)
@@ -243,6 +246,10 @@ export default {
   - Verified link creation and deletion from internal web UI (`https://short-admin.snowfox.live`).
   - Verified public 302 redirection from Bangladesh Cloudflare Edge (Chittagong `CGP` PoP).
   - Verified credentials saved securely in Bitwarden vault under "Homelab & Infrastructure".
+- [x] **Phase 6: Automated Local Backup & Lifecycle Management**
+  - Deployed [`manager/backup.py`](manager/backup.py) on LXC 225 with SQLite historical tracking and JSON snapshots.
+  - Activated systemd timer `short-links-backup.timer` (running at 08:30 and 20:30 with boot catchup).
+  - Integrated 1-click "Backup Now" and "Export JSON" directly into the admin web UI.
 
 ---
 
@@ -327,12 +334,70 @@ Querying `short.snowfox.live` before Terraform provisioned the Cloudflare DNS re
 - **Explicit Deletion Only:** A short link will only cease to exist if manually deleted by the administrator through the private dashboard registry table or via authenticated API call.
 - **Immunity to Homelab Power & Hardware Outages:** Because both the worker logic and KV storage live in Cloudflare's global edge cloud, public short links (`https://short.snowfox.live/<slug>`) will never go down or be lost if the homelab laptop turns off, the physical router restarts, or home internet drops during nightly power-saving schedules.
 
-#### Disaster Recovery & Backup Strategy:
-- **Terraform Safety:** Terraform manages the KV Namespace *resource declaration* (`cloudflare_workers_kv_namespace.short_links`), not the dynamic key-value contents within it. Running `terraform apply` or modifying worker code will never overwrite or purge existing shortened links.
-- **Cold Backup Capabilities:** Because the Cloudflare KV namespace is currently the sole source of truth, an off-cloud local backup snapshot can easily be obtained by exporting the registry:
-  ```bash
-  curl -s -H "Authorization: Bearer <SHORTENER_SECRET_TOKEN>" https://short.snowfox.live/api/list | jq . > short_links_backup_$(date +%F).json
-  ```
-  *(Optional: A scheduled systemd timer on LXC 210 `db-central` or LXC 225 can periodically archive this JSON to disk or PostgreSQL if offline archival is desired).*
+#### Disaster Recovery & Local Automated Backup Engine:
+
+To ensure full resilience against accidental Cloudflare account issues or namespace purges, an automated local backup engine is deployed directly on Proxmox LXC 225 (`short-manager`):
+
+```mermaid
+flowchart LR
+    subgraph CF["Cloudflare Edge"]
+        KV[("Workers KV<br>SHORT_LINKS")]
+    end
+
+    subgraph LXC225["Proxmox LXC 225 (vmbr1: 10.10.10.35)"]
+        Timer["systemd timer<br>(08:30 & 20:30 UTC)"] --> Script["backup.py"]
+        UI["short-admin Web UI<br>(Backup Now / Export JSON)"] --> Script
+        Script -- "GET /api/list (Bearer Auth)" --> KV
+        Script --> Snapshots["/var/backups/short-links/snapshots/<br>(Immutable JSON, 30d retention)"]
+        Script --> Latest["/var/backups/short-links/latest.json<br>(Atomic state file)"]
+        Script --> SQLite[("short_links.sqlite<br>(Soft-deletion tombstones)")]
+    end
+```
+
+1. **Storage Tiers on LXC 225 (`/var/backups/short-links`):**
+   - **Timestamped JSON Snapshots (`snapshots/short_links_YYYY-MM-DD_HHMMSS.json`):** Immutable point-in-time snapshots containing the full JSON payload (metadata + untruncated destinations). Retained for **30 days** before automatic pruning.
+   - **Latest State Snapshot (`latest.json`):** Atomically replaced on every run, serving as the fast export target.
+   - **SQLite Historical Database (`short_links.sqlite`):** Tracks the full lifecycle of all shortened links with persistent soft-deletion:
+     ```sql
+     CREATE TABLE short_links (
+         slug TEXT PRIMARY KEY,
+         destination TEXT NOT NULL,
+         title TEXT,
+         clicks INTEGER DEFAULT 0,
+         created_at TEXT,
+         first_backed_up_at TEXT NOT NULL,
+         last_synced_at TEXT NOT NULL,
+         is_active INTEGER DEFAULT 1
+     );
+     ```
+     If a slug is deleted from Cloudflare KV, `backup.py` retains it in SQLite with `is_active = 0`, ensuring an audit log of past links is never lost.
+
+2. **Systemd Automation:**
+   - **Service:** `/etc/systemd/system/short-links-backup.service` (runs `/usr/bin/python3 /opt/short-manager/backup.py`).
+   - **Timer:** `/etc/systemd/system/short-links-backup.timer` scheduled twice daily:
+     ```ini
+     OnCalendar=*-*-* 08:30:00
+     OnCalendar=*-*-* 20:30:00
+     Persistent=true
+     ```
+     `Persistent=true` guarantees that any backup missed while the homelab server is powered down during nightly schedules (00:00–07:00 AM) runs immediately when the server boots.
+
+3. **Web Dashboard Integration (`short-admin.snowfox.live`):**
+   - **Live Backup Bar:** Displays the latest backup timestamp, total active links, and snapshot count.
+   - **💾 Backup Now Button:** Instantly triggers `backup.run_backup()` via `POST /api/backup/run`.
+   - **⬇️ Export JSON Button:** Instantly downloads the latest JSON backup via `GET /api/backup/download`.
+
+4. **CLI Management Commands (SSH on LXC 225):**
+   ```bash
+   # Run an immediate backup snapshot
+   python3 /opt/short-manager/backup.py
+
+   # Inspect backup status and run history
+   python3 /opt/short-manager/backup.py --status
+
+   # View all backed up links including soft-deleted tombstones
+   python3 /opt/short-manager/backup.py --list
+   ```
+
 
 

@@ -1,0 +1,12 @@
+[Unit]
+Description=Snowfox Personal Short Links Automated Backup
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/opt/short-manager
+ExecStart=/usr/bin/python3 /opt/short-manager/backup.py
+StandardOutput=journal
+StandardError=journal
