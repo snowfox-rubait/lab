@@ -60,3 +60,134 @@ In crontab (`/etc/crontabs/root`), use:
 ```crontab
 0 4,16 * * * /usr/bin/safe-reboot
 ```
+
+---
+
+## 🕳️ Pi-hole v6 FTL Web Server & REST API Architecture (`400 Bad Request`)
+
+### Symptoms:
+- Accessing `https://pihole.snowfox.live/` displays a broken login page or logs: `400 Bad Request: {"error":{"key":"bad_request","message":"Bad request","hint":"The API is hosted at pi.hole/api, not pi.hole/admin/api"}}`.
+- Authentication calls to `/api/auth` or status probes to `/api/info/login` fail with HTTP 400.
+
+### Root Cause:
+In Pi-hole v5, the admin web UI was hosted by Lighttpd with all assets and endpoints scoped under `/admin/`. In Pi-hole v6, `pihole-FTL` embeds its own lightweight web server listening directly on port 80:
+- Web UI assets reside at `/admin/` (e.g., `/admin/login`, `/admin/queries`).
+- All REST API endpoints reside directly at `/api/` (e.g., `/api/info/login`, `/api/auth`).
+An Nginx reverse proxy configured with `location / { proxy_pass http://192.168.1.135:80/admin/; }` rewritten `/api/*` into `/admin/api/*`, which `pihole-FTL` explicitly rejects.
+
+### Resolution:
+In [`nginx-safe.conf`](file:///home/test/Documents/Obsidian%20Vault/lab/projects/02-per-zone-nginx-proxies/nginx-safe.conf), separate the root URL redirect from path proxying:
+```nginx
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    server_name pihole.snowfox.live;
+
+    # Exact root redirects to /admin/
+    location = / {
+        return 301 https://$host/admin/;
+    }
+
+    # Proxy all paths preserving original URIs (/admin/ and /api/)
+    location / {
+        proxy_pass http://192.168.1.135:80;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+---
+
+## ⚠️ Proxmox LXC Terraform Provider In-Place Replacement Hazard
+
+### Symptoms:
+- Running `terraform plan` or `terraform apply` on existing containers (e.g., `proxmox_virtual_environment_container.nginx_safe`) plans a destructive action: `-/+ destroy and then create replacement`.
+
+### Root Cause:
+In the `bpg/proxmox` provider (`v0.66+`), modifying or importing container attributes such as `operating_system.template_file_id`, `unprivileged`, or `user_account.keys` are marked as immutable and force full resource destruction and replacement (`forces replacement`). Running a blanket `terraform apply` will destroy production containers, wiping custom configurations and certificates.
+
+### Prevention & Resolution:
+1. Always inspect plans carefully for `-/+ destroy and then create replacement`.
+2. Use resource targeting when provisioning new containers:
+   ```bash
+   terraform apply -target=proxmox_virtual_environment_container.short_manager
+   ```
+3. If an existing live container was imported and triggers replacement warnings, remove it from Terraform state until lifecycle blocks (`ignore_changes`) are properly established:
+   ```bash
+   terraform state rm proxmox_virtual_environment_container.nginx_safe
+   ```
+
+---
+
+## 🔗 Short Link Manager Split Architecture & Cloudflare Worker Resolution Error
+
+### Symptoms:
+- Accessing `https://short-admin.snowfox.live/` displays an alert:
+  `Failed to reach Cloudflare Worker: <urlopen error [Errno -2] Name or service not known>`.
+
+### Architecture Clarification:
+The shortener platform utilizes a dual-tier security architecture:
+1. **`short-admin.snowfox.live` (Tier 2 - Private Management)**:
+   - Hosted on Proxmox LXC 225 (`10.10.10.35:8080`) in the **Safe Internal Zone (`vmbr1`)**.
+   - Zero inbound public access; accessed strictly via local Split-Horizon DNS / Tailscale.
+   - Used by the lab administrator to generate short links and view registry tables.
+2. **`short.snowfox.live` (Tier 1 - Public Redirection Edge)**:
+   - Hosted globally on **Cloudflare Workers + Cloudflare KV** with a strict Bangladesh (`BD`) geo-fence.
+   - Resolves publicly to Cloudflare Anycast IPs for 24/7/365 redirection (<15ms latency).
+
+### Root Cause:
+When opening the private admin UI (`short-admin.snowfox.live`), `app.py` triggers an outbound background call to `https://short.snowfox.live/api/links` to synchronize the link registry. If the Cloudflare Worker and custom domain route have not yet been deployed to Cloudflare via `wrangler`, the domain `short.snowfox.live` does not exist in DNS, triggering Python's `[Errno -2] Name or service not known`.
+
+### Resolution:
+Deploy the Cloudflare Worker and KV binding in [`projects/13-personal-url-shortener/worker/`](file:///home/test/Documents/Obsidian%20Vault/lab/projects/13-personal-url-shortener/worker/) using Wrangler (`wrangler deploy`) or Terraform. Once the worker is deployed and bound to `short.snowfox.live`, the private admin dashboard synchronizes seamlessly.
+
+---
+
+## ⏱️ Proxmox ThinkPad Midnight Auto-Shutdown Loop (`power-manager.sh`)
+
+### Symptoms:
+- Powering on the Proxmox ThinkPad laptop between 00:00 and 00:15 causes it to automatically shut down within 2 minutes.
+- SSH sessions receive broadcast warnings: `The system will power off in 2 minutes!` and `/run/nologin` prevents new logins.
+
+### Root Cause:
+The nightly power-saving cron script (`/usr/local/bin/power-manager.sh`) executes every 2 minutes via crontab:
+`*/2 * * * * /usr/local/bin/power-manager.sh`
+The script checks if the local time is within the shutdown window (`CURRENT_HOUR == 0 && CURRENT_MIN <= 15`). If booted during this window, it immediately executes `shutdown -h +2`.
+
+### Resolution:
+1. If booted during the window for maintenance, immediately cancel the pending shutdown and remove the nologin lock:
+   ```bash
+   shutdown -c && rm -f /run/nologin
+   ```
+2. In `power-manager.sh`, an uptime guard ensures the machine will not trigger auto-shutdown if it has been booted for less than 15 minutes:
+   ```bash
+   UPTIME_MINS=$(awk '{print int($1/60)}' /proc/uptime)
+   if [ "$UPTIME_MINS" -lt 15 ]; then
+       logger -t power-manager "Boot grace period active (${UPTIME_MINS}m < 15m); skipping scheduled shutdown."
+       exit 0
+   fi
+   ```
+
+---
+
+## 🛡️ WAN Controller (`wan.snowfox.live`) Host/Origin & NAT Allowlist
+
+### Symptoms:
+- Invoking `POST /api/set` on `https://wan.snowfox.live` returns `403 Forbidden`.
+
+### Root Cause:
+Two separate security layers rejected the request:
+1. **Nginx Client IP Allowlist on LXC 200**:
+   Requests originating from `vmbr1` (`10.10.10.0/24`) pass through OpenWrt VM 100 which NATs the traffic to its WAN IP `192.168.1.129`. Because `192.168.1.129` was omitted from `/etc/nginx/sites-available/wan-controller.conf`, Nginx dropped the connection with 403 Forbidden.
+2. **Application Host/Origin Validation in `/opt/app.py`**:
+   The backend daemon verified `ALLOWED_HOSTS = {"192.168.1.130", "127.0.0.1", "localhost", "wan.lab"}`. Requests routed via `wan.snowfox.live` passed `Host: wan.snowfox.live`, causing `app.py` to reject the request.
+
+### Resolution:
+1. Add OpenWrt VM NAT IP (`192.168.1.129`) to Nginx allowlist on LXC 200:
+   `allow 192.168.1.129;`
+2. Add `wan.snowfox.live` to `ALLOWED_HOSTS` in `/opt/app.py`:
+   `ALLOWED_HOSTS = {"192.168.1.130", "127.0.0.1", "localhost", "wan.snowfox.live", "wan.lab"}`
+

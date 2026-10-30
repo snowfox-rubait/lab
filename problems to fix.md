@@ -124,6 +124,8 @@
 | 🔴 **P1** | Add `set_real_ip_from` for Cloudflare Tunnel | `projects/02-per-zone-nginx-proxies/nginx-public.conf` | Fix client IP detection behind `cloudflared` | 🟢 **Fixed** |
 | 🔴 **P1** | Fix WAN Controller 403 ACLs for `wan.snowfox.live` | `projects/01-dual-openwrt-routing/wan-controller/` | Enable mode switching via `https://wan.snowfox.live` | 🟢 **Fixed & Verified** |
 | 🔴 **P1** | Fix Proxmox Terraform provider credentials | `iac/terraform/proxmox/` | Enable declarative LXC container management | 🟢 **Fixed & Verified** |
+| 🔴 **P1** | Fix Pi-hole v6 FTL Web Server & API routing | `projects/02-per-zone-nginx-proxies/nginx-safe.conf` | Fix `400 Bad Request` on Pi-hole v6 `/api/` endpoints | 🟢 **Fixed & Deployed** |
+| 🔴 **P1** | Provision LXC 225 & Deploy Short Link Manager | `iac/terraform/proxmox/lxc-short-manager.tf`, LXC 225 | Fix `502 Bad Gateway` on `short-admin.snowfox.live` | 🟢 **Fixed & Deployed** |
 | 🟡 **P2** | Audit static fallback route on physical router | Physical Router `/etc/config/network` | Prevent 45s watchdog false-revert in Mode 2 | 🟢 **Verified Active** |
 | 🟡 **P2** | Fix Dropbear & Pi-hole SSH authentication | `iac/inventory.py`, router, LXC 205 | Enable automated non-interactive Pyinfra execution | 🟢 **Fixed & Verified** |
 | 🟡 **P2** | Enable `ksmtuned` RAM deduplication on Proxmox | Proxmox Host (`/etc/ksmtuned.conf`) | Reclaim 20%–35% memory on 8GB host | ⚪ Standby (Pending host wake) |
