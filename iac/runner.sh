@@ -20,7 +20,7 @@ CMD="${1:-check}"
 
 case "$CMD" in
     check)
-        echo "=== [1/4] Checking Physical Router (192.168.1.1) ==="
+        echo "=== [1/5] Checking Physical Router (192.168.1.1) ==="
         if ping -c 1 -W 1 192.168.1.1 >/dev/null 2>&1; then
             echo "  [OK] Router reachable. Testing SSH Dropbear..."
             ssh -q -o BatchMode=yes -o ConnectTimeout=3 router "echo '  [OK] Router SSH authenticated. OS: '\$(cat /etc/openwrt_release | grep DISTRIB_DESCRIPTION | cut -d= -f2)" || echo "  [FAIL] Router SSH failed"
@@ -29,7 +29,7 @@ case "$CMD" in
         fi
 
         echo ""
-        echo "=== [2/4] Checking Proxmox Host (192.168.1.2) ==="
+        echo "=== [2/5] Checking Proxmox Host (192.168.1.2) ==="
         if ping -c 1 -W 1 192.168.1.2 >/dev/null 2>&1; then
             echo "  [OK] Proxmox reachable. Testing SSH..."
             ssh -q -o BatchMode=yes -o ConnectTimeout=3 proxmox "echo '  [OK] Proxmox SSH authenticated. Kernel: '\$(uname -r)" || echo "  [FAIL] Proxmox SSH failed"
@@ -38,7 +38,7 @@ case "$CMD" in
         fi
 
         echo ""
-        echo "=== [3/4] Checking WAN Controller (192.168.1.130) ==="
+        echo "=== [3/5] Checking WAN Controller (192.168.1.130) ==="
         if curl -s -m 2 http://192.168.1.130/api/status >/dev/null 2>&1; then
             echo "  [OK] WAN Controller HTTP API responding on :80"
         else
@@ -46,11 +46,20 @@ case "$CMD" in
         fi
 
         echo ""
-        echo "=== [4/4] Checking Pi-hole Sinkhole (192.168.1.135) ==="
+        echo "=== [4/5] Checking Pi-hole Sinkhole (192.168.1.135) ==="
         if ping -c 1 -W 1 192.168.1.135 >/dev/null 2>&1; then
             echo "  [OK] Pi-hole container reachable on 192.168.1.135"
         else
             echo "  [WARN] Pi-hole unreachable (Server sleep schedule active?)"
+        fi
+
+        echo ""
+        echo "=== [5/5] Checking Safe Internal Proxy (10.10.10.10) ==="
+        if ping -c 1 -W 1 10.10.10.10 >/dev/null 2>&1; then
+            echo "  [OK] nginx-safe container reachable on 10.10.10.10"
+            ssh -q -o BatchMode=yes -o ConnectTimeout=3 10.10.10.10 "echo '  [OK] nginx-safe SSH authenticated. Nginx status: '\$(systemctl is-active nginx)" || echo "  [FAIL] nginx-safe SSH failed"
+        else
+            echo "  [FAIL] nginx-safe 10.10.10.10 unreachable"
         fi
         ;;
 
