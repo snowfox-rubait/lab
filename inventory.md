@@ -38,11 +38,13 @@
   - **Registrar / Expiry:** Registered 2026-03-17, Expires **2027-03-17**.
   - **DNS & Edge:** Cloudflare (Zone ID, Account ID, Tunnel ID configured via local `.env`).
   - **IaC Tooling:** Terraform in `~/.cloudflare-terraform/` (`snowfox-tunnel`).
-  - **Current Live DNS Records:** None (Clean slate; old ZeroTier `openwrt` and idle tunnel CNAMEs destroyed via Terraform).
+  - **Current Live DNS Records:** 
+    - `vault.snowfox.live` (CNAME $\rightarrow$ `6f2301e3-8ebb-4ffc-b8bc-b7dedd3cfe06.cfargotunnel.com`, Proxied via Cloudflare Tunnel)
+    - All private homelab services (`pve`, `router`, `wan`, `pihole`, `short-admin`, `gitea`, etc.) return `NXDOMAIN` on public Cloudflare DNS per Split-Horizon architecture.
   - **Cloudflare Security Posture:**
     - Security Level: `Medium`
     - TLS 1.3: `Enabled`
-    - Current SSL Mode: `Off` *(Action item: Set to `Full (Strict)` once Nginx Cloudflare Origin CA certificate is mounted)*.
+    - Edge SSL Mode: `Universal SSL` active at edge for Cloudflare Tunnel (`https://vault.snowfox.live`). Apex origin mode currently set to `Off` for non-tunnel connections.
 - **Cloud Database Providers:**
   - Supabase (PostgreSQL / Auth / Storage)
   - Neon (Serverless Postgres)
