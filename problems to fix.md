@@ -128,7 +128,7 @@
 | 🔴 **P1** | Provision LXC 225 & Deploy Short Link Manager | `iac/terraform/proxmox/lxc-short-manager.tf`, LXC 225 | Fix `502 Bad Gateway` on `short-admin.snowfox.live` | 🟢 **Fixed & Deployed** |
 | 🟡 **P2** | Audit static fallback route on physical router | Physical Router `/etc/config/network` | Prevent 45s watchdog false-revert in Mode 2 | 🟢 **Verified Active** |
 | 🟡 **P2** | Fix Dropbear & Pi-hole SSH authentication | `iac/inventory.py`, router, LXC 205 | Enable automated non-interactive Pyinfra execution | 🟢 **Fixed & Verified** |
-| 🟡 **P2** | Enable `ksmtuned` RAM deduplication on Proxmox | Proxmox Host (`/etc/ksmtuned.conf`) | Reclaim 20%–35% memory on 8GB host | ⚪ Standby (Pending host wake) |
+| 🟡 **P2** | Enable `ksmtuned` RAM deduplication on Proxmox | Proxmox Host (`/etc/ksmtuned.conf`) | Reclaim 20%–35% memory on 8GB host | 🟢 **Active & Verified** |
 | 🟢 **P3** | Evaluate nighttime DNS upstream latency | Physical Router `/etc/config/dhcp` | Query measured at 57ms (no fallback penalty) | 🟢 **Audit Passed (57ms)** |
 | 🟢 **P3** | Offload Bot Hub (Project 06/09) to Proxmox/n8n | `projects/06-openwrt-telegram-bot/`, `projects/09-telegram-bot-hub/` | Conserve 16MB SPI flash on Archer C6 | ⚪ Roadmap Target |
 
