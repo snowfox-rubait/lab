@@ -2,7 +2,10 @@
 # Fallback to Mode 1 (Physical Router Main) to ensure home WAN stays active
 revert_wan_mode() {
     echo "Reverting router to Mode 1 (Physical Router Main)..."
-    curl -s -m 8 -X POST "http://192.168.1.130/api/set" -H "Content-Type: application/json" -d '{"mode":"1"}' >/dev/null 2>&1 || true
+    # Try via WAN controller API first (4s timeout)
+    curl -s -m 4 -X POST "http://192.168.1.130/api/set" -H "Content-Type: application/json" -d '{"mode":"1"}' >/dev/null 2>&1 || \
+    # Fallback to direct SSH to router if container has stopped or is unreachable
+    ssh -o ConnectTimeout=3 -o BatchMode=yes root@192.168.1.1 "wan-mode 1" >/dev/null 2>&1 || true
 }
 
 # Homelab Power Management & Auto-Wake daemon script
