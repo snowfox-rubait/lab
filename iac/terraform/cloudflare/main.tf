@@ -42,28 +42,17 @@ resource "cloudflare_workers_route" "shortener_route" {
   script_name = cloudflare_workers_script.shortener.name
 }
 
-# 4. DNS CNAME Record for short.snowfox.live pointing to Worker
+# 4. DNS Record for short.snowfox.live pointing to Worker
 resource "cloudflare_record" "short_domain" {
   zone_id = var.cloudflare_zone_id
   name    = "short"
-  type    = "CNAME"
-  content = "100::" # Standard Cloudflare Worker dummy target or apex
+  type    = "A"
+  content = "192.0.2.1" # Standard Cloudflare Worker dummy target (RFC 5737)
   proxied = true
   comment = "Personal URL Shortener Edge Worker (Terraform Managed)"
 }
 
-# 5. Strict Bangladesh-Only WAF Custom Rule (Layer 1 Defense-in-Depth)
-resource "cloudflare_ruleset" "waf_bd_geofence" {
-  zone_id     = var.cloudflare_zone_id
-  name        = "snowfox-bd-geofence"
-  description = "Block traffic to short.snowfox.live originating outside Bangladesh"
-  kind        = "zone"
-  phase       = "http_request_firewall_custom"
-
-  rules {
-    action      = "block"
-    expression  = "(http.host eq \"${var.short_domain}\" and ip.geoip.country ne \"BD\")"
-    description = "Block non-Bangladesh callers to short.snowfox.live"
-    enabled     = true
-  }
-}
+# 5. Note on Bangladesh Geo-Fence (Layer 1 Defense-in-Depth):
+# Note: The active zone custom WAF ruleset 'homelab_geo_fence' (a22286d92d23412eac57a3736ed923f5)
+# already blocks all non-BD requests across *.snowfox.live (except simplearch).
+# Additionally, Layer 2 in worker.js explicitly validates request.cf.country === 'BD'.

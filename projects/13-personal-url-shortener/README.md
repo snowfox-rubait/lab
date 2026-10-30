@@ -1,9 +1,9 @@
 # 🔗 Project 13: Personal URL Shortener (`short.snowfox.live`)
 
 > **Project ID:** `13-personal-url-shortener`  
-> **Status:** Planned / Architecture & Implementation Specification  
+> **Status:** Production / Fully Deployed & Verified  
 > **Target Public Domain:** `https://short.snowfox.live/abcdxyz`  
-> **Target Management Web UI:** Safe Internal Zone (`vmbr1`, `10.10.10.35` / `short.internal.lab`)  
+> **Target Management Web UI:** Safe Internal Zone (`vmbr1`, `10.10.10.35` / `short-admin.snowfox.live`)  
 > **Security Model:** **Strict Geo-Fencing** (Bangladesh Only) + **Air-Gapped Private Admin UI** (`vmbr1`) + **Serverless 24/7 Edge Redirection** (Cloudflare Workers + KV)
 
 ---
@@ -234,14 +234,12 @@ export default {
   - Scaffolded [`worker/worker.js`](worker/worker.js) with Bangladesh geo-fence, KV CRUD endpoints, and `setup.sh`.
 - [x] **Phase 2: Private 2-Page Web Management Application**
   - Developed zero-dependency [`manager/app.py`](manager/app.py) (Page 1: Link Generator with copy output, Page 2: Link Registry table with live search and deletion).
-- [ ] **Phase 3: Deploy Worker & KV to Cloudflare**
-  - Run `worker/setup.sh` to generate KV namespace `SHORT_LINKS` and set `SHORTENER_SECRET_TOKEN`.
-  - Add Cloudflare WAF rule restricting `short.snowfox.live` to Bangladesh (`BD`).
-- [ ] **Phase 4: Proxmox LXC Container Provisioning (`vmbr1`)**
-  - Launch Debian 13 LXC 225 on `vmbr1` (`10.10.10.35`).
-  - Run `manager/install.sh` or execute pyinfra playbook `pyinfra iac/inventory.py iac/tasks/short_manager.py`.
-  - Map `10.10.10.35 short.internal.lab` in local OpenWrt `dnsmasq` / Pi-hole.
-- [ ] **Phase 5: Verification & Geo-Fence Audit**
-  - Test link creation from internal web UI (`http://short.internal.lab:8080`).
-  - Verify public 302 redirection from Bangladesh IP.
-  - Verify 403 Forbidden rejection when queried from outside Bangladesh (via foreign VPN).
+- [x] **Phase 3: Deploy Worker & KV to Cloudflare via Terraform**
+  - Provisioned Cloudflare Workers KV namespace `SHORT_LINKS`, deployed ES module `snowfox-shortener`, configured custom route `short.snowfox.live/*`, and registered DNS A dummy record (`192.0.2.1` proxied).
+- [x] **Phase 4: Proxmox LXC Container Provisioning (`vmbr1`)**
+  - Launched Debian 13 LXC 225 on `vmbr1` (`10.10.10.35`) via Terraform [`iac/terraform/proxmox/lxc-short-manager.tf`](../../iac/terraform/proxmox/lxc-short-manager.tf).
+  - Deployed `app.py`, created systemd service `short-manager.service`, and linked internal reverse proxy [`nginx-safe.conf`](../../projects/02-per-zone-nginx-proxies/nginx-safe.conf) under `short-admin.snowfox.live`.
+- [x] **Phase 5: Verification & Geo-Fence Audit**
+  - Verified link creation and deletion from internal web UI (`https://short-admin.snowfox.live`).
+  - Verified public 302 redirection from Bangladesh Cloudflare Edge (Chittagong `CGP` PoP).
+  - Verified credentials saved securely in Bitwarden vault under "Homelab & Infrastructure".

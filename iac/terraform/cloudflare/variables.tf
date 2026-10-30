@@ -1,6 +1,20 @@
 variable "cloudflare_api_token" {
   type        = string
+  default     = null
   description = "Cloudflare API Token with Zone.DNS (Edit), Worker (Edit), and Account.KV (Edit) permissions"
+  sensitive   = true
+}
+
+variable "cloudflare_email" {
+  type        = string
+  default     = null
+  description = "Cloudflare Account Email"
+}
+
+variable "cloudflare_api_key" {
+  type        = string
+  default     = null
+  description = "Cloudflare Global API Key"
   sensitive   = true
 }
 
