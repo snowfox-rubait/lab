@@ -4,6 +4,26 @@ variable "proxmox_endpoint" {
   description = "Proxmox VE API endpoint"
 }
 
+variable "proxmox_api_token" {
+  type        = string
+  default     = null
+  description = "Proxmox API Token formatted as USER@REALM!TOKENID=UUID"
+  sensitive   = true
+}
+
+variable "proxmox_username" {
+  type        = string
+  default     = "root@pam"
+  description = "Proxmox username (used if api_token is not provided)"
+}
+
+variable "proxmox_password" {
+  type        = string
+  default     = null
+  description = "Proxmox password (used if api_token is not provided)"
+  sensitive   = true
+}
+
 variable "node_name" {
   type        = string
   default     = "snowfox"
