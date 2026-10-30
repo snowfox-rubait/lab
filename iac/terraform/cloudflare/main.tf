@@ -10,7 +10,7 @@ resource "cloudflare_workers_kv_namespace" "short_links" {
 }
 
 # 2. Cloudflare Worker Script Deployment
-resource "cloudflare_worker_script" "shortener" {
+resource "cloudflare_workers_script" "shortener" {
   account_id = var.cloudflare_account_id
   name       = "snowfox-shortener"
   content    = file("${path.module}/../../../projects/13-personal-url-shortener/worker/worker.js")
@@ -36,10 +36,10 @@ resource "cloudflare_worker_script" "shortener" {
 }
 
 # 3. Cloudflare Worker Route Binding
-resource "cloudflare_worker_route" "shortener_route" {
+resource "cloudflare_workers_route" "shortener_route" {
   zone_id     = var.cloudflare_zone_id
   pattern     = "${var.short_domain}/*"
-  script_name = cloudflare_worker_script.shortener.name
+  script_name = cloudflare_workers_script.shortener.name
 }
 
 # 4. DNS CNAME Record for short.snowfox.live pointing to Worker

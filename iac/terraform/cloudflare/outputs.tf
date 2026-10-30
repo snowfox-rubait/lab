@@ -4,7 +4,7 @@ output "kv_namespace_id" {
 }
 
 output "worker_route" {
-  value       = cloudflare_worker_route.shortener_route.pattern
+  value       = cloudflare_workers_route.shortener_route.pattern
   description = "Active edge route for short URL service"
 }
 
