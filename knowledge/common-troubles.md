@@ -191,3 +191,73 @@ Two separate security layers rejected the request:
 2. Add `wan.snowfox.live` to `ALLOWED_HOSTS` in `/opt/app.py`:
    `ALLOWED_HOSTS = {"192.168.1.130", "127.0.0.1", "localhost", "wan.snowfox.live", "wan.lab"}`
 
+---
+
+## 📦 Cloudflare Workers KV Metadata Limit Trap (`413 Payload Too Large`)
+
+### Symptoms:
+- Creating or shortening a URL in [`projects/13-personal-url-shortener`](file:///home/test/Documents/Obsidian Vault/lab/projects/13-personal-url-shortener/README.md) fails with:
+  `Failed to process request (KV PUT failed: 413 Payload Too Large)`.
+- Occurs primarily when shortening URLs containing long query strings, affiliate tags, tracking parameters, or session tokens (length > ~400–500 characters).
+
+### Root Cause:
+In Cloudflare Workers KV:
+- The **value** stored against a key can be up to **25 MiB**.
+- The **metadata** object attached via `env.SHORT_LINKS.put(slug, destination, { metadata })` has an inviolable hard cap of **1024 bytes (1 KiB)** after JSON serialization.
+When `destination` was duplicated inside `metadata` to avoid N+1 lookups during `/api/list`, any long destination URL caused `JSON.stringify(metadata)` to exceed 1024 bytes. Cloudflare Worker runtime immediately aborted the `put()` operation with HTTP 413.
+
+### Resolution:
+1. In `worker.js`, separate full storage from registry metadata previews:
+   ```javascript
+   const isTruncated = destination.length > 400;
+   const metadata = {
+     title: title ? String(title).slice(0, 100) : "",
+     destination: isTruncated ? destination.slice(0, 400) : destination,
+     truncated: isTruncated,
+     created_at: new Date().toISOString(),
+     clicks: 0
+   };
+
+   // Store full destination in the 25 MiB KV value without loss
+   await env.SHORT_LINKS.put(slug, destination, { metadata });
+   ```
+2. In `/api/list`, lazy-load the untruncated value from KV only if `meta.truncated === true`:
+   ```javascript
+   let destinationUrl = meta.destination || "";
+   if (meta.truncated || !destinationUrl) {
+     destinationUrl = (await env.SHORT_LINKS.get(key.name)) || destinationUrl;
+   }
+   ```
+3. Deploy updated script via Terraform in `iac/terraform/cloudflare/`.
+
+---
+
+## 🥷 Nginx Stealth `404 Not Found` Mapping for Protected Administrative Endpoints
+
+### Symptoms:
+- Attempting to mask a protected endpoint (like `vault.snowfox.live/admin`) by adding `error_page 403 =404;` results in Nginx returning `HTTP/1.1 302 Moved Temporarily` redirecting to the literal URI `=404`.
+- Automated port scanners or directory fuzzers receive `403 Forbidden`, confirming the admin panel exists.
+
+### Root Cause:
+In Nginx configuration syntax, `error_page 403 =404;` without a URI parameter is parsed as redirecting to a location named `=404`. To return a true HTTP 404 response body without an external HTTP redirect hop, Nginx requires a named location handler.
+
+### Resolution:
+Define an internal named location `@notfound` and reference it in `error_page`:
+```nginx
+location @notfound {
+    return 404 "404 Not Found\n";
+}
+
+location /admin {
+    error_page 403 =404 @notfound;
+    allow 192.168.1.197;    # Workstation PC
+    allow 10.10.10.0/24;     # Internal management tier
+    deny all;                # Deny all external tunnel connections (returns stealth 404)
+
+    proxy_pass https://10.20.20.11:8443;
+    ...
+}
+```
+Unauthorized external visitors connecting via Cloudflare Tunnel receive a clean `404 Not Found` (zero information disclosure), while authorized local subnets pass through to Vaultwarden.
+
+

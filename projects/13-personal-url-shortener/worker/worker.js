@@ -68,7 +68,7 @@ export default {
           if (!slug || slug.trim() === "") {
             slug = generateRandomSlug(6);
           } else {
-            slug = slug.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "-");
+            slug = slug.trim().toLowerCase().replace(/[^a-z0-9_-]/g, "-").slice(0, 100);
           }
 
           // Reserved API slugs
@@ -79,14 +79,19 @@ export default {
             });
           }
 
+          // Cloudflare Workers KV enforces a strict 1024-byte limit on metadata JSON.
+          // For long URLs (> 400 chars), store a preview in metadata and set truncated: true.
+          // The full URL is always preserved without loss in the 25 MiB KV value.
+          const isTruncated = destination.length > 400;
           const metadata = {
             title: title ? String(title).slice(0, 100) : "",
-            destination: destination,
+            destination: isTruncated ? destination.slice(0, 400) : destination,
+            truncated: isTruncated,
             created_at: new Date().toISOString(),
             clicks: 0
           };
 
-          // Store in Cloudflare KV
+          // Store in Cloudflare KV (full destination preserved in value)
           await env.SHORT_LINKS.put(slug, destination, { metadata });
 
           const shortUrl = `${url.origin}/${slug}`;
@@ -117,9 +122,14 @@ export default {
 
           for (const key of listResponse.keys) {
             const meta = key.metadata || {};
+            let destinationUrl = meta.destination || "";
+            if (meta.truncated || !destinationUrl) {
+              destinationUrl = (await env.SHORT_LINKS.get(key.name)) || destinationUrl;
+            }
+
             items.push({
               slug: key.name,
-              destination: meta.destination || await env.SHORT_LINKS.get(key.name) || "",
+              destination: destinationUrl,
               title: meta.title || "",
               created_at: meta.created_at || "Unknown",
               clicks: meta.clicks || 0,
