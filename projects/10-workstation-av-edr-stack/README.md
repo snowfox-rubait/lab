@@ -3,7 +3,7 @@
 > **Project ID:** `10-workstation-av-edr-stack`  
 > **Target Node:** Main PC Workstation (HP EliteDesk 800 G3 Mini, Arch Linux `rubait`)  
 > **Status:** Planned / Architecture & Integration Blueprint  
-> **Reference Specs:** [DIY Linux Security Stack — Feature Parity Map](../../../linux_diy_security_stack.md) & [AV Tech Stack Breakdown](../../../av_tech_stack_breakdown.md) *(Obsidian Vault Documents)*  
+> **Reference Specs:** [DIY Linux Security Stack — Feature Parity Map](../../../Linux%20AntiMalware%20Stack/linux_diy_security_stack.md) & [AV Tech Stack Breakdown](../../../Linux%20AntiMalware%20Stack/av_tech_stack_breakdown.md) *(Obsidian Vault Documents)*  
 > **Core Purpose:** Comprehensive host-based endpoint protection (YARA, ClamAV, osquery, Tetragon/eBPF, Falco) orchestrated via local Dockerized n8n and integrated into homelab incident-response cascades.
 
 ---
