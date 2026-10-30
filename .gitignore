@@ -28,3 +28,12 @@ override.tf.json
 .DS_Store
 Thumbs.db
 
+# Python bytecode and virtual environments
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+
