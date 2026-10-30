@@ -2,7 +2,7 @@ import http.server, socketserver, json, subprocess, urllib.parse, datetime, sys
 
 PORT = 8080
 LOG_FILE = "/var/log/wan-controller-audit.log"
-ALLOWED_HOSTS = {"192.168.1.130", "127.0.0.1", "localhost"}
+ALLOWED_HOSTS = {"192.168.1.130", "127.0.0.1", "localhost", "wan.snowfox.live", "wan.lab"}
 
 def audit_log(client_ip, mode, result):
     ts = datetime.datetime.now(datetime.timezone.utc).isoformat()
