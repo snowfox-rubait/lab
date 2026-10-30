@@ -308,3 +308,31 @@ flowchart TD
 Querying `short.snowfox.live` before Terraform provisioned the Cloudflare DNS record caused local resolvers (systemd-resolved, Pi-hole v6) to cache the negative response (`NXDOMAIN`). Even after successful deployment, internal services failed with Python's `[Errno -2] Name or service not known`.
 - **Resolution:** Restarted `pihole-FTL.service` to flush Pi-hole v6's in-memory query cache (`pihole reloaddns` only flushes blocklists) and executed `resolvectl flush-caches` on the host.
 
+---
+
+### 8.3 Data Storage, Permanence & Lifecycle Architecture
+
+#### Where Short Links are Stored:
+1. **Cloud-Native Edge Storage (Cloudflare Workers KV):**
+   - The authoritative datastore for all short link mappings (`slug` ➔ `destination`) is the Cloudflare Workers KV namespace **`SHORT_LINKS`** (`id = "b84885f3e70345b8af6c2faa8f243e8a"`).
+   - Data is distributed and globally replicated across Cloudflare's serverless edge infrastructure (300+ PoPs worldwide, including Dhaka `DAC` and Chittagong `CGP`).
+2. **Role of Homelab LXC 225 (`short-manager`):**
+   - The internal web app running on Proxmox LXC 225 (`vmbr1`, `10.10.10.35`) is a **stateless management client**.
+   - It maintains **zero persistent database files** on local homelab disks.
+   - When creating, querying, or deleting links via `https://short-admin.snowfox.live`, the Python backend acts purely as an authenticated proxy using standard library `urllib` to dispatch HTTPS requests to Cloudflare's edge REST endpoints (`/api/shorten`, `/api/list`, `/api/delete`).
+
+#### Permanence & Retention (Are Links Permanent?):
+- **Yes, links are permanent by default.**
+- **Infinite TTL (No Automatic Expiration):** Cloudflare Workers KV entries never expire unless an explicit `expiration` (Unix epoch) or `expirationTtl` (seconds) parameter is passed into `env.SHORT_LINKS.put()`. In our implementation ([`worker/worker.js`](worker/worker.js)), no TTL parameters are specified. All shortened links remain active indefinitely.
+- **Explicit Deletion Only:** A short link will only cease to exist if manually deleted by the administrator through the private dashboard registry table or via authenticated API call.
+- **Immunity to Homelab Power & Hardware Outages:** Because both the worker logic and KV storage live in Cloudflare's global edge cloud, public short links (`https://short.snowfox.live/<slug>`) will never go down or be lost if the homelab laptop turns off, the physical router restarts, or home internet drops during nightly power-saving schedules.
+
+#### Disaster Recovery & Backup Strategy:
+- **Terraform Safety:** Terraform manages the KV Namespace *resource declaration* (`cloudflare_workers_kv_namespace.short_links`), not the dynamic key-value contents within it. Running `terraform apply` or modifying worker code will never overwrite or purge existing shortened links.
+- **Cold Backup Capabilities:** Because the Cloudflare KV namespace is currently the sole source of truth, an off-cloud local backup snapshot can easily be obtained by exporting the registry:
+  ```bash
+  curl -s -H "Authorization: Bearer <SHORTENER_SECRET_TOKEN>" https://short.snowfox.live/api/list | jq . > short_links_backup_$(date +%F).json
+  ```
+  *(Optional: A scheduled systemd timer on LXC 210 `db-central` or LXC 225 can periodically archive this JSON to disk or PostgreSQL if offline archival is desired).*
+
+
