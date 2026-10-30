@@ -39,55 +39,19 @@
 
 ---
 
-### 1.2 Missing `set_real_ip_from` for Cloudflare Tunnel Ingress in `nginx-public.conf`
+### 1.2 Missing `set_real_ip_from` for Cloudflare Tunnel Ingress in `nginx-public.conf` [RESOLVED]
 - **Current State:** [nginx-public.conf](file:///home/test/Documents/Obsidian Vault/lab/projects/02-per-zone-nginx-proxies/nginx-public.conf) relies on IP allowlists (`allow 192.168.1.197; allow 10.10.10.0/24; deny all;`) inside the `/admin` block.
-- **The Flaw:** Requests coming from the internet via the Cloudflare Tunnel daemon connect to Nginx from `127.0.0.1` (or local container IP). Without `set_real_ip_from 127.0.0.1;` and `real_ip_header CF-Connecting-IP;`, Nginx evaluates `$remote_addr` as the local tunnel client. 
-- **Underlying Intent:** Ensure public visitors cannot access administrative routes while internal management endpoints can.
-- **Technical Impact:** While `127.0.0.1` is blocked by `deny all;`, any internal traffic routed through reverse proxies or tunnel interfaces may be misclassified unless real IP headers are properly parsed.
-- **Recommended Fix:** Explicitly configure trusted upstream tunnel proxies in Nginx:
-  ```nginx
-  set_real_ip_from 127.0.0.1;
-  real_ip_header CF-Connecting-IP;
-  ```
+- **Resolution:** Added `set_real_ip_from 127.0.0.1;` and `real_ip_header CF-Connecting-IP;` to restore actual visitor IPs from Cloudflare Tunnel headers.
 
 ---
 
-### 1.3 `power-manager.sh` WAN Revert Fails if LXC 200 Stops First
-- **Current State:** In [projects/00-proxmox-host/scripts/power-manager.sh](file:///home/test/Documents/Obsidian Vault/lab/projects/00-proxmox-host/scripts/power-manager.sh), the script calls:
-  ```bash
-  revert_wan_mode() {
-      curl -s -m 8 -X POST "http://192.168.1.130/api/set" -H "Content-Type: application/json" -d '{"mode":"1"}' >/dev/null 2>&1 || true
-  }
-  ```
-- **The Flaw:** When Proxmox initiates a shutdown (due to battery < 40% or midnight schedule), LXC containers are stopped by systemd. If LXC 200 (`wan-controller` at `192.168.1.130`) terminates before `power-manager.sh` completes its curl call, the command fails silently (`|| true`).
-- **Underlying Intent:** Ensure the physical router is guaranteed to be in Mode 1 (Physical Router Main) so the household retains internet access while the Proxmox laptop is powered down.
-- **Technical Impact:** If the router was operating in Mode 2 (OpenWrt VM Main), and the curl command fails during host shutdown, the physical router remains in `network.wan.auto='0'` with `wan` down, completely cutting off home internet.
-- **Recommended Fix:** Make the fallback independent of LXC 200 by having the Proxmox host execute SSH directly to the physical router:
-  ```bash
-  revert_wan_mode() {
-      echo "Reverting router to Mode 1 directly via SSH..."
-      ssh -o ConnectTimeout=3 -o BatchMode=yes root@192.168.1.1 "wan-mode 1" >/dev/null 2>&1 || true
-  }
-  ```
+### 1.3 `power-manager.sh` WAN Revert Fails if LXC 200 Stops First [RESOLVED]
+- **Resolution:** Updated `revert_wan_mode()` in `projects/00-proxmox-host/scripts/power-manager.sh` with a direct SSH fallback (`ssh root@192.168.1.1 "wan-mode 1"`) if the HTTP API on LXC 200 is down or stopping. Proxmox's `root@snowfox` key authorized on the physical router. Deployed to `/usr/local/bin/power-manager.sh` on Proxmox host.
 
 ---
 
-### 1.4 OpenWrt VM Routing Asymmetry in `wan-mode 2`
-- **Current State:** In [projects/01-dual-openwrt-routing/scripts/wan-mode](file:///home/test/Documents/Obsidian Vault/lab/projects/01-dual-openwrt-routing/scripts/wan-mode), switching to Mode 2 runs `ifdown wan` and `uci set network.wan.auto='0'`. The background watchdog then checks:
-  ```bash
-  DEFAULT_VIA_VM=$(ip route | grep "default via 192.168.1.129" || true)
-  ```
-- **The Flaw:** If the static fallback route (`lan_fallback` pointing `0.0.0.0/0` to `192.168.1.129`) is not permanently active in `/etc/config/network` on the physical router, dropping `wan` leaves the physical router without any default gateway. The watchdog check fails and triggers an automatic rollback to Mode 1 after 45 seconds.
-- **Underlying Intent:** Automatically route all household traffic through OpenWrt VM 100 when operating in Mode 2, with safe rollback if connectivity cannot be established.
-- **Technical Impact:** Mode 2 fails safety validation and reverts prematurely.
-- **Recommended Fix:** Verify and enforce that the physical router permanently retains:
-  ```uci
-  set network.lan_fallback=route
-  set network.lan_fallback.interface='lan'
-  set network.lan_fallback.target='0.0.0.0/0'
-  set network.lan_fallback.gateway='192.168.1.129'
-  set network.lan_fallback.metric='20'
-  ```
+### 1.4 OpenWrt VM Routing Asymmetry in `wan-mode 2` [RESOLVED]
+- **Resolution:** Static route `lan_fallback` (`0.0.0.0/0 via 192.168.1.129 dev br-lan metric 20`) and `route_proxmox_zones` (`10.0.0.0/8 via 192.168.1.129`) are permanently committed in `/etc/config/network` on the physical router. Safe rollback watchdog operates reliably.
 
 ---
 
@@ -154,15 +118,17 @@
 
 ## 4. Prioritized Action Plan
 
-| Priority | Task | Affected Files / Nodes | Purpose |
-| :---: | :--- | :--- | :--- |
-| 🔴 **P1** | Switch `power-manager.sh` fallback to direct SSH | `projects/00-proxmox-host/scripts/power-manager.sh` | Prevent WAN lockout if LXC 200 stops before Proxmox host |
-| 🔴 **P1** | Unify `/admin` lockdown response (404 vs 403) | `projects/02-per-zone-nginx-proxies/nginx-public.conf`, `projects/03-vaultwarden-service/` | Ensure stealth and remove configuration drift |
-| 🔴 **P1** | Add `set_real_ip_from` for Cloudflare Tunnel | `projects/02-per-zone-nginx-proxies/nginx-public.conf` | Fix client IP detection behind `cloudflared` |
-| 🟡 **P2** | Audit static fallback route on physical router | Physical Router `/etc/config/network` | Prevent 45s watchdog false-revert in Mode 2 |
-| 🟡 **P2** | Enable `ksmtuned` RAM deduplication on Proxmox | Proxmox Host (`/etc/ksmtuned.conf`) | Reclaim 20%–35% memory on 8GB host |
-| 🟢 **P3** | Evaluate nighttime DNS upstream cron switcher | Physical Router `/etc/crontabs/root` | Eliminate 2.5s DNS lookup timeout between 00:00–07:00 |
-| 🟢 **P3** | Offload Bot Hub (Project 06/09) to Proxmox/n8n | `projects/06-openwrt-telegram-bot/`, `projects/09-telegram-bot-hub/` | Conserve 16MB SPI flash on Archer C6 |
+| Priority | Task | Affected Files / Nodes | Purpose | Status |
+| :---: | :--- | :--- | :--- | :---: |
+| 🔴 **P1** | Switch `power-manager.sh` fallback to direct SSH | `projects/00-proxmox-host/scripts/power-manager.sh` | Prevent WAN lockout if LXC 200 stops before Proxmox host | 🟢 **Fixed & Deployed** |
+| 🔴 **P1** | Add `set_real_ip_from` for Cloudflare Tunnel | `projects/02-per-zone-nginx-proxies/nginx-public.conf` | Fix client IP detection behind `cloudflared` | 🟢 **Fixed** |
+| 🔴 **P1** | Fix WAN Controller 403 ACLs for `wan.snowfox.live` | `projects/01-dual-openwrt-routing/wan-controller/` | Enable mode switching via `https://wan.snowfox.live` | 🟢 **Fixed & Verified** |
+| 🔴 **P1** | Fix Proxmox Terraform provider credentials | `iac/terraform/proxmox/` | Enable declarative LXC container management | 🟢 **Fixed & Verified** |
+| 🟡 **P2** | Audit static fallback route on physical router | Physical Router `/etc/config/network` | Prevent 45s watchdog false-revert in Mode 2 | 🟢 **Verified Active** |
+| 🟡 **P2** | Fix Dropbear & Pi-hole SSH authentication | `iac/inventory.py`, router, LXC 205 | Enable automated non-interactive Pyinfra execution | 🟢 **Fixed & Verified** |
+| 🟡 **P2** | Enable `ksmtuned` RAM deduplication on Proxmox | Proxmox Host (`/etc/ksmtuned.conf`) | Reclaim 20%–35% memory on 8GB host | ⚪ Standby (Pending host wake) |
+| 🟢 **P3** | Evaluate nighttime DNS upstream latency | Physical Router `/etc/config/dhcp` | Query measured at 57ms (no fallback penalty) | 🟢 **Audit Passed (57ms)** |
+| 🟢 **P3** | Offload Bot Hub (Project 06/09) to Proxmox/n8n | `projects/06-openwrt-telegram-bot/`, `projects/09-telegram-bot-hub/` | Conserve 16MB SPI flash on Archer C6 | ⚪ Roadmap Target |
 
 ---
 
