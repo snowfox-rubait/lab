@@ -243,3 +243,68 @@ export default {
   - Verified link creation and deletion from internal web UI (`https://short-admin.snowfox.live`).
   - Verified public 302 redirection from Bangladesh Cloudflare Edge (Chittagong `CGP` PoP).
   - Verified credentials saved securely in Bitwarden vault under "Homelab & Infrastructure".
+
+---
+
+## 🧩 8. Architecture Deep Dives & Production Edge-Cases
+
+### 8.1 Cloudflare Workers KV Metadata Limit (`413 Payload Too Large`)
+
+#### The Problem:
+When creating or shortening URLs with long query parameters, Google search tokens, session IDs, or affiliate tracking strings (> ~400–500 characters), the creation request failed with:
+`Failed to process request (KV PUT failed: 413 Payload Too Large)`
+
+#### The Root Cause:
+Cloudflare Workers KV provides two distinct storage mechanisms with radically different capacity limits:
+1. **Key Value:** Up to **25 MiB** per key.
+2. **Key Metadata (`{ metadata }`):** Hard cap of **1024 bytes (1 KiB)** of JSON.
+
+To avoid an expensive $N+1$ query pattern when loading the dashboard registry table (`/api/list`), the original implementation stored the destination URL in both the KV value AND the metadata object. When a user shortened a long URL, `JSON.stringify(metadata)` exceeded 1,024 bytes, causing Cloudflare KV runtime to immediately abort the `.put()` operation with HTTP 413.
+
+#### The Solution (Two-Tier Storage & Lazy Hydration):
+We re-architected the storage and retrieval pipeline in [`worker/worker.js`](worker/worker.js):
+
+```mermaid
+flowchart TD
+    A["POST /api/shorten"] --> B{"destination.length > 400?"}
+    B -- Yes --> C["Store truncated preview in metadata (truncated: true)<br>Store full URL in 25 MiB KV Value"]
+    B -- No --> D["Store full URL in both metadata & value"]
+    
+    C --> E["Cloudflare KV (.put)"]
+    D --> E
+    
+    E --> F["Client redirects via GET /:slug"]
+    F --> G["Reads KV Value directly (up to 25 MiB) ➔ 302 Found"]
+    
+    E --> H["Dashboard loads via GET /api/list"]
+    H --> I{"meta.truncated == true?"}
+    I -- Yes --> J["Lazy-fetch full URL from KV value"]
+    I -- No --> K["Serve fast from metadata preview"]
+```
+
+1. **Write Path (`POST /api/shorten`):**
+   - If `destination.length > 400`, the worker stores a truncated preview (`destination.slice(0, 400)`) in metadata with `truncated: true`.
+   - The full, untruncated destination URL is **always committed to the 25 MiB KV value** without data loss.
+2. **Public Redirection Engine (`GET /:slug`):**
+   - Edge redirects directly consume `record.value` from `env.SHORT_LINKS.getWithMetadata(slug)`. Redirection has full 25 MiB headroom and is completely unaffected by metadata limits.
+3. **Registry Hydration (`GET /api/list`):**
+   - The worker lists keys using metadata for high performance.
+   - If `meta.truncated === true` (or if metadata is missing), the worker lazily retrieves the complete URL with `await env.SHORT_LINKS.get(key.name)`.
+4. **Verification:**
+   - Tested and verified with a **1,254-character destination URL**. Link was created successfully (`201 Created`), redirected seamlessly (`302 Found`), and listed in full on the admin dashboard.
+
+---
+
+### 8.2 Split Architecture & Negative DNS Caching (`NXDOMAIN`)
+
+#### Architecture Overview:
+- **`short-admin.snowfox.live` (Tier 2 - Private Management):**
+  - Hosted locally in Proxmox LXC 225 (`10.10.10.35:8080`) on the Safe Internal Zone (`vmbr1`).
+  - Zero inbound public ingress; reachable strictly via Split-Horizon DNS or Tailscale.
+- **`short.snowfox.live` (Tier 1 - Public Redirection Edge):**
+  - Hosted globally on Cloudflare Edge (Workers + KV) with strict Bangladesh geo-fencing.
+
+#### Negative Caching Trap:
+Querying `short.snowfox.live` before Terraform provisioned the Cloudflare DNS record caused local resolvers (systemd-resolved, Pi-hole v6) to cache the negative response (`NXDOMAIN`). Even after successful deployment, internal services failed with Python's `[Errno -2] Name or service not known`.
+- **Resolution:** Restarted `pihole-FTL.service` to flush Pi-hole v6's in-memory query cache (`pihole reloaddns` only flushes blocklists) and executed `resolvectl flush-caches` on the host.
+
