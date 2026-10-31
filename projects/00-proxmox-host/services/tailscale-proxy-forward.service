@@ -1,12 +1,21 @@
 [Unit]
-Description=Tailscale to Safe Zone Nginx Ingress Port Forwarding
+Description=Tailscale to Safe Zone Nginx Ingress Port Forwarding and NAT Masquerade
 After=tailscaled.service
 Wants=tailscaled.service
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/bin/sh -c "iptables -t nat -C PREROUTING -i tailscale0 -p tcp --dport 80 -j DNAT --to-destination 10.10.10.10:80 2>/dev/null || iptables -t nat -A PREROUTING -i tailscale0 -p tcp --dport 80 -j DNAT --to-destination 10.10.10.10:80; iptables -t nat -C PREROUTING -i tailscale0 -p tcp --dport 443 -j DNAT --to-destination 10.10.10.10:443 2>/dev/null || iptables -t nat -A PREROUTING -i tailscale0 -p tcp --dport 443 -j DNAT --to-destination 10.10.10.10:443; iptables -C FORWARD -i tailscale0 -d 10.10.10.10 -p tcp -m multiport --dports 80,443 -j ACCEPT 2>/dev/null || iptables -A FORWARD -i tailscale0 -d 10.10.10.10 -p tcp -m multiport --dports 80,443 -j ACCEPT"
+ExecStart=/bin/sh -c "\
+iptables -t nat -C POSTROUTING -s 100.64.0.0/10 -j MASQUERADE 2>/dev/null || iptables -t nat -A POSTROUTING -s 100.64.0.0/10 -j MASQUERADE; \
+iptables -C FORWARD -s 100.64.0.0/10 -j ACCEPT 2>/dev/null || iptables -A FORWARD -s 100.64.0.0/10 -j ACCEPT; \
+iptables -C FORWARD -d 100.64.0.0/10 -m state --state RELATED,ESTABLISHED -j ACCEPT 2>/dev/null || iptables -A FORWARD -d 100.64.0.0/10 -m state --state RELATED,ESTABLISHED -j ACCEPT; \
+iptables -t nat -C PREROUTING -i tailscale0 -p tcp --dport 80 -j DNAT --to-destination 10.10.10.10:80 2>/dev/null || iptables -t nat -A PREROUTING -i tailscale0 -p tcp --dport 80 -j DNAT --to-destination 10.10.10.10:80; \
+iptables -t nat -C PREROUTING -i tailscale0 -p tcp --dport 443 -j DNAT --to-destination 10.10.10.10:443 2>/dev/null || iptables -t nat -A PREROUTING -i tailscale0 -p tcp --dport 443 -j DNAT --to-destination 10.10.10.10:443; \
+iptables -t nat -C PREROUTING -i tailscale0 -p udp --dport 53 -j DNAT --to-destination 192.168.1.135:53 2>/dev/null || iptables -t nat -A PREROUTING -i tailscale0 -p udp --dport 53 -j DNAT --to-destination 192.168.1.135:53; \
+iptables -t nat -C PREROUTING -i tailscale0 -p tcp --dport 53 -j DNAT --to-destination 192.168.1.135:53 2>/dev/null || iptables -t nat -A PREROUTING -i tailscale0 -p tcp --dport 53 -j DNAT --to-destination 192.168.1.135:53; \
+iptables -C FORWARD -i tailscale0 -d 10.10.10.10 -p tcp -m multiport --dports 80,443 -j ACCEPT 2>/dev/null || iptables -A FORWARD -i tailscale0 -d 10.10.10.10 -p tcp -m multiport --dports 80,443 -j ACCEPT; \
+iptables -C FORWARD -i tailscale0 -d 192.168.1.135 -p udp --dport 53 -j ACCEPT 2>/dev/null || iptables -A FORWARD -i tailscale0 -d 192.168.1.135 -p udp --dport 53 -j ACCEPT"
 
 [Install]
 WantedBy=multi-user.target
