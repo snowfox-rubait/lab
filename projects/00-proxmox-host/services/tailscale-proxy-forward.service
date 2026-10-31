@@ -1,0 +1,12 @@
+[Unit]
+Description=Tailscale to Safe Zone Nginx Ingress Port Forwarding
+After=tailscaled.service
+Wants=tailscaled.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c "iptables -t nat -C PREROUTING -i tailscale0 -p tcp --dport 80 -j DNAT --to-destination 10.10.10.10:80 2>/dev/null || iptables -t nat -A PREROUTING -i tailscale0 -p tcp --dport 80 -j DNAT --to-destination 10.10.10.10:80; iptables -t nat -C PREROUTING -i tailscale0 -p tcp --dport 443 -j DNAT --to-destination 10.10.10.10:443 2>/dev/null || iptables -t nat -A PREROUTING -i tailscale0 -p tcp --dport 443 -j DNAT --to-destination 10.10.10.10:443; iptables -C FORWARD -i tailscale0 -d 10.10.10.10 -p tcp -m multiport --dports 80,443 -j ACCEPT 2>/dev/null || iptables -A FORWARD -i tailscale0 -d 10.10.10.10 -p tcp -m multiport --dports 80,443 -j ACCEPT"
+
+[Install]
+WantedBy=multi-user.target

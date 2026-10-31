@@ -49,3 +49,21 @@ server.shell(
         "if command -v systemctl >/dev/null 2>&1 && systemctl list-unit-files | grep -q ksmtuned; then systemctl enable --now ksmtuned; fi",
     ],
 )
+
+# 4. Tailscale Subnet Router & Mesh Port Forwarding
+files.put(
+    name="Deploy /etc/systemd/system/tailscale-proxy-forward.service",
+    src="projects/00-proxmox-host/services/tailscale-proxy-forward.service",
+    dest="/etc/systemd/system/tailscale-proxy-forward.service",
+    user="root",
+    group="root",
+    mode="644",
+)
+
+systemd.service(
+    name="Ensure tailscale-proxy-forward service is active and enabled",
+    service="tailscale-proxy-forward",
+    running=True,
+    enabled=True,
+)
+

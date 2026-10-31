@@ -130,7 +130,7 @@ The HP EliteDesk Mini PC currently runs several local services:
 | Service / Node | Platform | Network Location | Status | Current Details / Source Files |
 | :--- | :--- | :--- | :--- | :--- |
 | **Physical Gateway** | TP-Link Archer C6 v3 | `192.168.1.1` (LAN) | 🟢 **Live** | Mode 1 PPPoE, `wan-mode` script, strictorder DNS upstream, fw4 MAC allowlist & anti-bypass DNAT |
-| **Proxmox Hypervisor** | ThinkPad Laptop | `192.168.1.2` (`vmbr0`) | 🟢 **Live** | PVE 9.2.2, kernel 7.0, `power-manager.sh` (`projects/00-proxmox-host/scripts/power-manager.sh`), `wake-proxmox` (`projects/00-proxmox-host/scripts/wake-proxmox`), `wol.service` |
+| **Proxmox Hypervisor** | ThinkPad Laptop | `192.168.1.2` (`vmbr0`) / `100.127.129.106` (Tailscale) | 🟢 **Live** | PVE 9.2.2, kernel 7.0, Tailscale Subnet Router (`pve-thinkpad` routes `10.10.10.0/24`, `10.30.30.0/24`, `192.168.1.0/24`), `power-manager.sh` (`projects/00-proxmox-host/scripts/power-manager.sh`), `wake-proxmox` (`projects/00-proxmox-host/scripts/wake-proxmox`), `wol.service` |
 | **Virtual Router (VM 100)** | OpenWrt 25.12.6 VM | `192.168.1.129` (`vmbr0`) | 🟢 **Live** | Standby `wan_vlan` (VLAN 100), gateway for `safe_internal`, `public_ingress`, and `ha_iot` zones |
 | **WAN Controller (LXC 200)**| Debian 12 LXC | `192.168.1.130` (`vmbr0`) | 🟢 **Live** | Nginx + Python API (`projects/01-dual-openwrt-routing/wan-controller/app.py`), Web dashboard on port 80 |
 | **Pi-hole DNS Sinkhole (LXC 205)**| Debian 12 LXC | `192.168.1.135` (`vmbr0`) | 🟢 **Live** | Pi-hole v6.5, StevenBlack adult & ad blocklists (148k domains), strict fallback upstream (`projects/07-pihole-dns-sinkhole`) |

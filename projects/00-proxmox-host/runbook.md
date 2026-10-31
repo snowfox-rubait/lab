@@ -262,3 +262,28 @@ Proxmox VE is protected against local brute-force attacks on the Web GUI (`:8006
   # Manually unban an IP:
   ssh proxmox "fail2ban-client unban <IP_ADDRESS>"
   ```
+
+---
+
+## 🌐 Remote Mesh Access & Tailscale Subnet Router (`pve-thinkpad`)
+
+> **Node Name:** `pve-thinkpad`  
+> **Tailscale IP:** `100.127.129.106`  
+> **Mesh Ingress Service:** `/etc/systemd/system/tailscale-proxy-forward.service` (Tracked in [services/tailscale-proxy-forward.service](services/tailscale-proxy-forward.service))
+
+Proxmox VE runs official Tailscale as a dual-purpose mesh router:
+1. **Subnet Router:** Advertises internal subnets `10.10.10.0/24` (Safe Zone), `10.30.30.0/24` (IoT Zone), and `192.168.1.0/24` (Out-of-Band LAN) with `net.ipv4.ip_forward = 1` persisted in `/etc/sysctl.d/99-tailscale.conf`.
+2. **Safe Zone Port Forwarding Gateway:** Transparently forwards inbound HTTP (:80) and HTTPS (:443) traffic arriving on `tailscale0` directly to `nginx-safe` (`10.10.10.10`), enabling seamless access to `pve.snowfox.live`, `short-admin.snowfox.live`, `pihole.snowfox.live`, and other private internal domains from any phone, laptop, or remote client over the tailnet without requiring client-side subnet route acceptance.
+
+### Operational Commands:
+```bash
+# Check Tailscale status:
+ssh proxmox "tailscale status"
+
+# View advertised subnet routes:
+ssh proxmox "tailscale debug prefs | grep -A 5 -i 'AdvertiseRoutes'"
+
+# Check port forwarding service:
+ssh proxmox "systemctl status tailscale-proxy-forward.service"
+```
+
