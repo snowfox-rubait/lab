@@ -297,14 +297,18 @@ HTTP/1.1 200 OK
 | **4** | **Browser `NET::ERR_CERT_AUTHORITY_INVALID`** | LXC 201 was running temporary bootstrap self-signed certificate. | Automated Let's Encrypt Wildcard certificate via Terraform [`iac/terraform/acme-wildcard`](../../iac/terraform/acme-wildcard). | 🟢 Solved |
 | **5** | **Cloudflare R2 storage token rejected** | Token was generated under R2 Object Storage (with S3 credentials) rather than Account/Zone API Tokens. | Programmatically generated dedicated `Terraform-Homelab-Master` token using Global API Key, saved to Bitwarden. | 🟢 Solved |
 | **6** | **Terraform JumpHost SSH authentication prompt** | `~/.ssh/config` matched `Host proxmox` but not literal IP `192.168.1.2`. | Updated `~/.ssh/config` to match both alias and IP with `id_rsa_gemini_codeberg`. | 🟢 Solved |
+| **7** | **Tailscale Subnet Router Asymmetric Packet Drop** | Packets forwarded from `tailscale0` retain `100.64.0.0/10` CGNAT source IP; containers route replies to OpenWrt gateway (`10.10.10.1`), which drops them out WAN. | Added `iptables -t nat -A POSTROUTING -s 100.64.0.0/10 -j MASQUERADE` and conntrack rules in `tailscale-proxy-forward.service`. | 🟢 Solved |
+| **8** | **Remote Mobile Split-DNS Failure (`NXDOMAIN` on Phone)** | Mobile carrier/public DNS returns `NXDOMAIN` for private `*.snowfox.live` domains when away from home LAN. | Forwarded `tailscale0:53` to Pi-hole (`192.168.1.135`) and added Tailscale MagicDNS restricted nameserver `100.127.129.106` for `snowfox.live`. | 🟢 Solved |
 
 ---
 
 ### Live Verification Matrix
-All endpoints verified with strict public CA validation from workstation PC:
+All endpoints verified with strict public CA validation from local workstation and remote mobile devices via Tailscale:
 - `https://pve.snowfox.live` $\rightarrow$ `HTTP 200 OK` (Issuer: Let's Encrypt `YR1`)
 - `https://router.snowfox.live` $\rightarrow$ `HTTP 200 OK` (LuCI Dashboard)
 - `https://pihole.snowfox.live` $\rightarrow$ `HTTP 200 OK` (Pi-hole Dashboard)
 - `https://wan.snowfox.live` $\rightarrow$ `HTTP 200 OK` (WAN Gateway Controller)
 - `https://short-admin.snowfox.live` $\rightarrow$ `HTTP 200 OK` (URL Shortener Admin)
+- **Remote Mobile via Tailscale:** Verified 100% operational on Android mobile network (no public ports exposed).
+
 

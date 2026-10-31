@@ -260,4 +260,49 @@ location /admin {
 ```
 Unauthorized external visitors connecting via Cloudflare Tunnel receive a clean `404 Not Found` (zero information disclosure), while authorized local subnets pass through to Vaultwarden.
 
+---
+
+## 🌐 Tailscale Subnet Router Asymmetric Routing & Mobile Split-DNS Traps
+
+### Symptoms:
+- Tailscale connects successfully on remote phones or laptops (`100.x.y.z` is reachable, green in app).
+- Accessing internal services via domain (`https://pve.snowfox.live`, `https://short-admin.snowfox.live`) fails with `DNS_PROBE_FINISHED_NXDOMAIN` or `ERR_NAME_NOT_RESOLVED`.
+- Accessing internal services via IP (`http://10.10.10.10` or `http://10.10.10.35:8080`) hangs and times out despite routes being approved in the admin console.
+
+### Root Causes:
+1. **Asymmetric Routing Across Virtual Bridges:**
+   When the subnet router (Proxmox host) forwards incoming WireGuard packets from `tailscale0` (`100.64.0.0/10`) to containers in `vmbr1` (`10.10.10.10`), the packets retain their Tailscale CGNAT source IP (`100.x.y.z`). When `10.10.10.10` generates a reply, its local routing table directs traffic to its default gateway (`10.10.10.1` / OpenWrt VM 100). Because OpenWrt does not host the Tailscale interface, it forwards the `100.x.y.z` packet out to the WAN / ISP PPPoE gateway, where it is silently dropped by upstream routing filters.
+2. **Private Split-Horizon DNS vs. Cellular Resolvers:**
+   Per ADR-008, private internal services (`pve.snowfox.live`, `short-admin.snowfox.live`, `pihole.snowfox.live`) do not exist in public Cloudflare DNS. A mobile phone on cellular or external Wi-Fi queries default public resolvers (8.8.8.8 or mobile carrier) and immediately receives `NXDOMAIN`.
+3. **Client Subnet Route Acceptance:**
+   The Tailscale mobile app does not route advertised RFC1918 subnets (`10.10.10.0/24`, `192.168.1.0/24`) unless the client toggle **"Use Tailscale subnets"** is explicitly enabled in app settings.
+
+### Resolution:
+1. **Configure NAT Masquerade & Connection Tracking on Subnet Router:**
+   On the Proxmox host, masquerade traffic originating from the Tailscale mesh when routed to local bridges:
+   ```bash
+   iptables -t nat -A POSTROUTING -s 100.64.0.0/10 -j MASQUERADE
+   iptables -A FORWARD -s 100.64.0.0/10 -j ACCEPT
+   iptables -A FORWARD -d 100.64.0.0/10 -m state --state RELATED,ESTABLISHED -j ACCEPT
+   ```
+   This ensures target containers send reply packets directly back to the Proxmox host IP on the bridge, resolving asymmetric routing.
+2. **Transparent Safe Zone Proxy Forwarding (`tailscale-proxy-forward.service`):**
+   Forward HTTP (:80) and HTTPS (:443) arriving on `tailscale0` directly to `nginx-safe` (`10.10.10.10`):
+   ```bash
+   iptables -t nat -A PREROUTING -i tailscale0 -p tcp --dport 80 -j DNAT --to-destination 10.10.10.10:80
+   iptables -t nat -A PREROUTING -i tailscale0 -p tcp --dport 443 -j DNAT --to-destination 10.10.10.10:443
+   ```
+   Clients can connect either directly via subnet IP (`10.10.10.10`) or via the gateway's Tailscale IP (`100.127.129.106`).
+3. **Forward Mesh DNS on Port 53 to Pi-hole:**
+   Forward port 53 (UDP & TCP) on `tailscale0` to Pi-hole OOB (`192.168.1.135:53`):
+   ```bash
+   iptables -t nat -A PREROUTING -i tailscale0 -p udp --dport 53 -j DNAT --to-destination 192.168.1.135:53
+   iptables -t nat -A PREROUTING -i tailscale0 -p tcp --dport 53 -j DNAT --to-destination 192.168.1.135:53
+   ```
+4. **Tailscale MagicDNS Restricted Nameserver:**
+   In [Tailscale Admin Console $\rightarrow$ DNS](https://login.tailscale.com/admin/dns), add a **Custom Nameserver** pointing to `100.127.129.106`, toggled with **"Restrict to search domain"** set to `snowfox.live`.
+5. **Client Toggle:**
+   In the mobile Tailscale app settings, toggle **"Use Tailscale subnets"** to **ON**.
+
+
 
