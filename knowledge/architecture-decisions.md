@@ -600,3 +600,97 @@ In this model:
   ```
   Terraform's local-exec streams certificates and triggers `systemctl reload nginx` non-interactively in sub-second time.
 
+---
+
+#### 7. Failure: Tailscale Subnet Router Asymmetric Routing Packet Drops
+- **Symptoms:** Remote mobile clients connected to Tailscale could ping internal IP `10.10.10.10`, but HTTPS connections timed out.
+- **Root Cause:** Tailscale packets entered via `tailscale0` with source addresses in `100.64.0.0/10` and were routed to `vmbr1`. When LXC 201 replied, its default gateway (`10.10.10.1` OpenWrt VM) received the return packet. OpenWrt treated `100.64.0.0/10` as WAN traffic and routed it out the PPPoE interface rather than back to Proxmox.
+- **Engineering Solution:** Deployed source NAT masquerading on the Proxmox host in `/etc/systemd/system/tailscale-proxy-forward.service`:
+  ```bash
+  iptables -t nat -A POSTROUTING -s 100.64.0.0/10 -j MASQUERADE
+  ```
+  This ensures containers reply directly to the hypervisor's bridge interface.
+
+---
+
+#### 8. Failure: Mobile Split-DNS Carrier NXDOMAIN Trap
+- **Symptoms:** Mobile phone on Tailscale could access raw IP `10.10.10.10:443`, but hostnames like `https://pve.snowfox.live` failed to resolve.
+- **Root Cause:** Internal domains have zero public Cloudflare DNS records (anti-scanning privacy). Mobile cellular providers query public DNS and cache `NXDOMAIN`.
+- **Engineering Solution:** Forwarded UDP/TCP port 53 on `tailscale0` to Pi-hole (`192.168.1.135:53`), and configured Tailscale MagicDNS with a Restricted Nameserver for `snowfox.live` pointing to `100.127.129.106`.
+
+---
+
+#### 9. Failure: Node.js 20 Engine Rejections (`EBADENGINE`) & Platform Mismatches (`EBADPLATFORM`)
+- **Symptoms:** Running `npm install -g n8n` on Debian 13's default Node.js 20.19.2 failed with fatal errors:
+  ```
+  npm ERR! code EBADENGINE (required: { node: '>=22' })
+  npm ERR! notsup Unsupported platform for @napi-rs/canvas-linux-arm64-musl: wanted {"os":"linux","arch":"arm64"}
+  ```
+- **Root Cause:** Modern n8n packages (LangChain, Azure SDK, Vue 3.5, OpenTelemetry) mandate Node.js >= 22.x, and npm 9 evaluated optional platform binaries strictly.
+- **Engineering Solution:** Deployed the official NodeSource Node.js 22.x LTS repository (`22.23.4`) and npm `10.9.9`. Installed with `--legacy-peer-deps` to smoothly resolve the 2,017-package dependency tree.
+
+---
+
+#### 10. Failure: PostgreSQL Multi-Statement Transaction Error in `psql`
+- **Symptoms:** Executing user and database creation in a single `psql -c` command aborted:
+  `ERROR: CREATE DATABASE cannot run inside a transaction block`.
+- **Root Cause:** PostgreSQL executes multiple statements passed to `-c` inside an implicit transaction (`BEGIN ... COMMIT`). `CREATE DATABASE` cannot execute within an active transaction.
+- **Engineering Solution:** Executed separate atomic `psql -c` statements for `CREATE ROLE`, `CREATE DATABASE`, and `GRANT ALL PRIVILEGES`.
+
+---
+
+#### 11. Failure: Terraform `bpg/proxmox` Destructive Replacement Trap (`forces replacement` on Import)
+- **Symptoms:** Importing live LXC containers into Terraform resulted in `Plan: 3 to add, 0 to change, 3 to destroy` with `forces replacement` on `operating_system.template_file_id`, `unprivileged`, and `initialization.user_account.keys`.
+- **Root Cause:** Proxmox VE API does not persist the original OS template path after container creation, so `bpg/proxmox` provider reads `template_file_id` as `null` on import. Comparing this against `var.debian_template` triggers Terraform's immutable attribute replacement logic.
+- **Engineering Solution:** Applied defensive `lifecycle` blocks:
+  ```hcl
+  lifecycle {
+    prevent_destroy = true
+    ignore_changes = [
+      operating_system[0].template_file_id,
+      initialization[0].user_account,
+      unprivileged,
+    ]
+  }
+  ```
+  This transformed the plan to `0 to add, 3 to change (in-place), 0 to destroy`.
+
+---
+
+## ADR-009: Dedicated Native LXC Architecture for Centralized Automation (n8n) and Diagramming (Mermaid) with Zero-Docker Footprint
+
+- **Date:** 2026-11-03
+- **Status:** Approved & Implemented
+- **Scope:** Execution model, memory optimization, and reverse proxy routing for workflow automation (`n8n.snowfox.live`) and architectural diagramming (`mermaid.snowfox.live`).
+
+---
+
+### 1. Context & Decision Drivers
+The user required spinning up **n8n** and **Mermaid Live Editor** with strict architectural constraints:
+1. **LXC Isolation without Nested Docker:** Because LXC is already a lightweight Linux container namespace, running Docker inside LXC introduces unnecessary cgroup v2 emulation, storage driver overhead (`overlayfs`/`fuse`), and ~300 MiB of idle RAM waste across containers.
+2. **Strictly Non-Public Ingress:** Accessible only via LAN Split-Horizon DNS or Tailscale mesh (`*.snowfox.live`), fronted by `nginx-safe` (`10.10.10.10`).
+3. **Multi-Tenant Database Persistence:** n8n state stored in the central PostgreSQL cluster on `db-central` (`10.70.70.10:5432`) across the OpenWrt firewall pinhole.
+4. **Declarative Terraform Management:** Fully captured in `iac/terraform/proxmox/`.
+
+---
+
+### 2. Architectural Implementations
+
+#### 2.1 n8n Workflow Automation Hub (LXC 240)
+- **Container Specs:** 1 vCPU, 1024 MiB RAM, 8 GB SSD on `local-lvm`, `vmbr1` (`10.10.10.25/24`).
+- **Runtime:** Native Node.js 22 LTS (`22.23.4`) installed via NodeSource; n8n installed globally via npm with `--legacy-peer-deps`.
+- **Process Management:** Managed via systemd service unit `/etc/systemd/system/n8n.service` under unprivileged system user `n8n`.
+- **Database:** PostgreSQL 17 on `db-central` (`10.70.70.10:5432`), database `n8n_db`, role `n8n_user`, SSL enabled (`sslmode=require`).
+- **Ingress:** `https://n8n.snowfox.live` via `nginx-safe` with WebSocket upgrade (`Upgrade $http_upgrade`, `Connection "upgrade"`).
+
+#### 2.2 Mermaid Live Editor & Diagram Renderer (LXC 245)
+- **Container Specs:** 1 vCPU, 512 MiB RAM, 4 GB SSD on `local-lvm`, `vmbr1` (`10.10.10.26/24`).
+- **Runtime:** Native Nginx web server serving compiled SvelteKit Single Page Application (SPA) static files in `/var/www/mermaid`.
+- **Memory Footprint:** Resident memory is **< 15 MiB** (vs. ~180 MiB if running containerized Docker daemon).
+- **Ingress:** `https://mermaid.snowfox.live` via `nginx-safe` proxying to `http://10.10.10.26:80`.
+
+#### 2.3 Split-Horizon DNS & Tailscale Integration
+- Added authoritative DNS entries for `n8n.snowfox.live` and `mermaid.snowfox.live` pointing to `10.10.10.10` in Pi-hole (`192.168.1.135`), physical router (`192.168.1.1`), and OpenWrt VM (`192.168.1.129`).
+- Both services inherit encrypted zero-trust Tailscale remote access via the hypervisor's NAT masquerade and MagicDNS configuration.
+
+

@@ -119,3 +119,88 @@ An autonomous security watchdog designed to detect credential compromise and ass
 - [x] **Phase 4: Declarative Infrastructure:** Fully managed via Terraform (`iac/terraform/proxmox/lxc-n8n.tf`).
 - [ ] **Phase 5: Vaultwarden Watchdog Node:** Build the Bitwarden CLI sidecar and test `bw report password-health` in sandbox.
 - [ ] **Phase 6: Multi-Service Alert Dispatcher:** Integrate Proxmox backup notifications, OpenWrt WAN status changes, and Pi-hole DNS sinkhole statistics into unified n8n workflows.
+
+---
+
+## 🛠️ 5. Production Specifications & Service Units
+
+### 5.1 Environment Configuration (`/etc/n8n/n8n.env`)
+```env
+# Server Network Settings
+N8N_HOST=0.0.0.0
+N8N_PORT=5678
+N8N_PROTOCOL=https
+WEBHOOK_URL=https://n8n.snowfox.live/
+GENERIC_TIMEZONE=Asia/Dhaka
+
+# PostgreSQL Database Backend (LXC 210 db-central)
+DB_TYPE=postgresdb
+DB_POSTGRESDB_HOST=10.70.70.10
+DB_POSTGRESDB_PORT=5432
+DB_POSTGRESDB_DATABASE=n8n_db
+DB_POSTGRESDB_USER=n8n_user
+DB_POSTGRESDB_PASSWORD=<SCRUBBED_POSTGRES_PASS>
+DB_POSTGRESDB_SSL=true
+DB_POSTGRESDB_SSL_REJECT_UNAUTHORIZED=false
+
+# Storage & Confinement
+N8N_USER_FOLDER=/var/lib/n8n
+N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+N8N_LOG_LEVEL=info
+N8N_LOG_OUTPUT=console,file
+N8N_LOG_FILE_LOCATION=/var/lib/n8n/n8n.log
+N8N_LOG_FILE_MAX_SIZE=10
+N8N_LOG_FILE_MAX_COUNT=5
+```
+
+### 5.2 Systemd Unit (`/etc/systemd/system/n8n.service`)
+```ini
+[Unit]
+Description=n8n Workflow Automation Hub
+After=network.target
+
+[Service]
+Type=simple
+User=n8n
+Group=n8n
+EnvironmentFile=/etc/n8n/n8n.env
+ExecStart=/usr/bin/n8n
+Restart=always
+RestartSec=10
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
+```
+
+---
+
+## 🔬 6. Engineering Post-Mortem: What, How, Why, Failures & Solves
+
+### A. The "What, How, and Why" Summary
+- **What:** Provisioned n8n inside Proxmox LXC 240 running natively on Node.js 22 LTS with state persisted directly to PostgreSQL 17 on `db-central` (`10.70.70.10`), reverse-proxied via `nginx-safe` on `https://n8n.snowfox.live`.
+- **How:** Deployed unprivileged Debian 13 LXC on `vmbr1`, configured NodeSource Node.js 22 LTS repos, created PostgreSQL user and schema on LXC 210, deployed systemd service unit, enabled WebSocket upgrade in Nginx, and imported the resource into Terraform.
+- **Why:** Avoids nested Docker overhead, saves ~200 MB of resident RAM, guarantees persistent workflow execution state in central encrypted database backups, and keeps ingress strictly non-public via Split-Horizon DNS and Tailscale.
+
+### B. Failures Encountered & Engineering Solutions
+
+#### 1. Failure: Node.js 20 Engine Rejections (`EBADENGINE`) & Platform Mismatches (`EBADPLATFORM`)
+- **Symptoms:** Running `npm install -g n8n` on Debian 13's native Node.js 20.19.2 failed with fatal errors:
+  ```
+  npm ERR! code EBADENGINE (required: { node: '>=22' })
+  npm ERR! notsup Unsupported platform for @napi-rs/canvas-linux-arm64-musl: wanted {"os":"linux","arch":"arm64"}
+  ```
+- **Root Cause:** Modern n8n packages (LangChain, Azure SDK, Vue 3.5, OpenTelemetry) mandate Node.js >= 22.x, and npm 9 evaluated optional platform binaries strictly.
+- **Engineering Solution:** Deployed the official NodeSource Node.js 22.x LTS repository (`curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && apt-get install -y nodejs`), which upgraded the runtime to Node `v22.23.4` and npm `10.9.9`. Installed with `--legacy-peer-deps` to smoothly resolve the 2,017-package tree.
+
+#### 2. Failure: PostgreSQL Multi-Statement Transaction Error
+- **Symptoms:** Creating database and user in a single `psql -c` command aborted:
+  `ERROR: CREATE DATABASE cannot run inside a transaction block`.
+- **Root Cause:** PostgreSQL executes multiple statements passed to `-c` inside an implicit transaction (`BEGIN ... COMMIT`). `CREATE DATABASE` cannot execute within an active transaction.
+- **Engineering Solution:** Executed separate atomic `psql -c` statements for `CREATE ROLE`, `CREATE DATABASE`, and `GRANT ALL PRIVILEGES`.
+
+#### 3. Failure: Interrupted `npm install` on In-Place Metadata Updates
+- **Symptoms:** During initial npm package compilation, the process exited with code `143` (SIGTERM).
+- **Root Cause:** Running an uncoordinated Terraform state sync during active package installation signaled the container.
+- **Engineering Solution:** Completed Terraform import with protective lifecycle blocks first, then re-ran `npm install -g --legacy-peer-deps n8n`. Because npm already cached downloaded packages in `/root/.npm`, the subsequent run finished cleanly and linked `/usr/bin/n8n`.
+

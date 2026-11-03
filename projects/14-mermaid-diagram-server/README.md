@@ -90,3 +90,26 @@ server {
 
 - **Local LAN:** Pi-hole (`192.168.1.135`) and OpenWrt (`192.168.1.1` / `192.168.1.129`) map `mermaid.snowfox.live` $\rightarrow$ `10.10.10.10`.
 - **Tailscale Mesh:** Android/remote devices use MagicDNS custom nameserver `100.127.129.106` for `snowfox.live`, reaching `nginx-safe` securely over wireguard encapsulation.
+
+---
+
+## 🔬 6. Engineering Post-Mortem: What, How, Why, Failures & Solves
+
+### A. The "What, How, and Why" Summary
+- **What:** Provisioned a dedicated, isolated Mermaid Live Editor diagramming server in Proxmox LXC 245 without running Docker inside the container.
+- **How:** Extracted the compiled SvelteKit production Single Page Application (SPA) static files from `ghcr.io/mermaid-js/mermaid-live-editor:latest` into `/var/www/mermaid` in Debian 13 LXC 245, served by native Nginx on port 80, reverse-proxied via `nginx-safe` on `https://mermaid.snowfox.live`.
+- **Why:** Running Docker inside LXC wastes ~200 MiB of idle RAM and requires kernel emulation. A pure static Nginx build runs on under 15 MiB resident memory with zero vulnerability surface.
+
+### B. Failures Encountered & Engineering Solutions
+
+#### 1. Failure: Pi-hole v6 FTL Reload Command Removed
+- **Symptoms:** Adding the DNS mapping `address=/mermaid.snowfox.live/10.10.10.10` to `/etc/dnsmasq.d/05-custom-snowfox.conf` and executing `pihole-FTL reload` failed with:
+  `pihole-FTL: invalid option -- 'reload'`.
+- **Root Cause:** Pi-hole v6 removed the `reload` CLI parameter.
+- **Engineering Solution:** Used `systemctl restart pihole-FTL` inside LXC 205, which atomically reloaded the custom dnsmasq drop-ins.
+
+#### 2. Failure: SPA Client-Side Deep Linking Returning 404
+- **Symptoms:** Direct navigation to paths like `https://mermaid.snowfox.live/edit#...` failed if Nginx searched for physical directories.
+- **Root Cause:** SvelteKit uses client-side pushState routing; only `index.html` physically exists on disk.
+- **Engineering Solution:** Enforced `try_files $uri $uri/ /index.html;` in `/etc/nginx/sites-available/mermaid` so all deep links fallback to the client-side router.
+
