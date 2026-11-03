@@ -24,7 +24,7 @@ uci add_list dhcp.@dnsmasq[0].rebind_domain="${DOMAIN}"
 # Targeted hostnames mapped to nginx-safe reverse proxy (10.10.10.10)
 # Note: Public hostnames (e.g. short.snowfox.live, root snowfox.live) are NOT
 # mapped here, allowing them to resolve to Cloudflare Edge normally.
-SERVICES="pve router wan pihole gitea n8n short-admin photos ha internal"
+SERVICES="pve router wan pihole gitea n8n mermaid short-admin photos ha internal"
 
 echo "[2/3] Configuring internal service DNS records..."
 for s in ${SERVICES}; do

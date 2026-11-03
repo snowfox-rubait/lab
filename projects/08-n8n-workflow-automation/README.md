@@ -1,9 +1,11 @@
 # 🔄 Project 08: n8n Workflow Automation Hub
 
 > **Project ID:** `08-n8n-workflow-automation`  
+> **Node:** Proxmox VE LXC 240 (`10.10.10.25`)  
 > **Target Subnet:** Safe Internal Zone (`vmbr1`, `10.10.10.0/24`)  
-> **Status:** Planned / Architecture & Security Blueprint  
-> **Core Purpose:** Centralized self-hosted low-code workflow automation orchestrating homelab services, scheduled telemetry, security notifications, and incident response pipelines.
+> **Status:** 🟢 Live & Production Verified  
+> **Infrastructure as Code:** Declarative Terraform (`iac/terraform/proxmox/lxc-n8n.tf`)  
+> **Core Purpose:** Centralized self-hosted workflow automation orchestrating homelab services, scheduled telemetry, security notifications, and incident response pipelines.
 
 ---
 
@@ -109,9 +111,11 @@ An autonomous security watchdog designed to detect credential compromise and ass
 
 ---
 
-## 📋 4. Roadmap & Planned Future Implementations
+## 📋 4. Roadmap & Implementation Status
 
-- [ ] **Phase 1: n8n Container Deployment:** Provision Proxmox Debian LXC with rootless containerized n8n on `vmbr1` (`10.10.10.25`).
-- [ ] **Phase 2: Database Centralization:** Connect n8n state storage to PostgreSQL on `vmbr7` (`10.70.70.10:5432`).
-- [ ] **Phase 3: Vaultwarden Watchdog Node:** Build the Bitwarden CLI sidecar and test `bw report password-health` in sandbox.
-- [ ] **Phase 4: Multi-Service Alert Dispatcher:** Integrate Proxmox backup notifications, OpenWrt WAN status changes, and Pi-hole DNS sinkhole statistics into unified n8n workflows.
+- [x] **Phase 1: n8n LXC Container Deployment:** Provisioned Proxmox Debian 13 LXC 240 with native Node.js 22 LTS on `vmbr1` (`10.10.10.25`), managed via `systemd` (`n8n.service`).
+- [x] **Phase 2: Database Centralization:** Connected n8n state storage to PostgreSQL 17 on `db-central` (`vmbr7`, `10.70.70.10:5432`, `n8n_db`).
+- [x] **Phase 3: Ingress & Split-Horizon TLS:** Routed through `nginx-safe` (`10.10.10.10`) on `https://n8n.snowfox.live` with WebSocket support.
+- [x] **Phase 4: Declarative Infrastructure:** Fully managed via Terraform (`iac/terraform/proxmox/lxc-n8n.tf`).
+- [ ] **Phase 5: Vaultwarden Watchdog Node:** Build the Bitwarden CLI sidecar and test `bw report password-health` in sandbox.
+- [ ] **Phase 6: Multi-Service Alert Dispatcher:** Integrate Proxmox backup notifications, OpenWrt WAN status changes, and Pi-hole DNS sinkhole statistics into unified n8n workflows.

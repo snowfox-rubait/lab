@@ -403,6 +403,7 @@ Instead of mDNS, we adopt **Centralized Unicast Local DNS** anchored in OpenWrt 
 | **Safe Internal Reverse Proxy**| `10.10.10.10` | `internal.lab` | `vmbr1` (Safe Apps Tier) |
 | **Gitea Source Control** | `10.10.10.15` | `gitea.lab` | `vmbr1` (Safe Internal) |
 | **n8n Workflow Automation** | `10.10.10.25` | `n8n.lab` | `vmbr1` (Safe Internal) |
+| **Mermaid Diagram Server** | `10.10.10.26` | `mermaid.lab` | `vmbr1` (Safe Internal) |
 | **Mosquitto MQTT Broker** | `10.30.30.2` | `mqtt.lab` | `vmbr3` (IoT Zone) |
 | **Home Assistant Core** | `10.30.30.5` | `ha.lab` | `vmbr3` (IoT Zone) |
 
@@ -514,6 +515,8 @@ In this model:
 | **Pi-hole OOB** | `https://pihole.snowfox.live` | `http://192.168.1.135:80/admin/` | `vmbr0` (Physical LAN) | 🟢 200 OK (TLS 1.3) |
 | **WAN Controller** | `https://wan.snowfox.live` | `http://192.168.1.130:80` | `vmbr0` (Physical LAN) | 🟢 200 OK (TLS 1.3) |
 | **Short Link Manager** | `https://short-admin.snowfox.live`| `http://10.10.10.35:8080` | `vmbr1` (Safe Internal) | 🟢 200 OK (TLS 1.3) |
+| **n8n Automation Engine** | `https://n8n.snowfox.live` | `http://10.10.10.25:5678` | `vmbr1` (Safe Internal) | 🟢 200 OK (TLS 1.3) |
+| **Mermaid Diagram Server** | `https://mermaid.snowfox.live` | `http://10.10.10.26:80` | `vmbr1` (Safe Internal) | 🟢 200 OK (TLS 1.3) |
 
 ---
 
