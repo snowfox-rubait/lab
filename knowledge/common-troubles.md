@@ -304,5 +304,77 @@ Unauthorized external visitors connecting via Cloudflare Tunnel receive a clean 
 5. **Client Toggle:**
    In the mobile Tailscale app settings, toggle **"Use Tailscale subnets"** to **ON**.
 
+---
+
+## 🏰 Why Can I Access Private Services (`*.snowfox.live`) Without Tailscale? (Split-Horizon DNS vs. Tailscale Mesh)
+
+### The Confusion:
+*"I turned off Tailscale on my phone/laptop, but I can still open `https://n8n.snowfox.live`, `https://short-admin.snowfox.live`, and `https://mermaid.snowfox.live`! Does this mean my private services are publicly exposed to anyone on the internet?"*
+
+### The Reality:
+**No. None of your private services are exposed to the internet.**
+
+Your homelab uses **Split-Horizon DNS** (documented in [ADR-008](architecture-decisions.md#444)):
+
+```
+═════════════════════════════════════════════════════════════════════════════════════
+                                WHERE ARE YOU CONNECTED?
+═════════════════════════════════════════════════════════════════════════════════════
+
+  1. AT HOME (Connected to Home Wi-Fi / Ethernet - 192.168.1.0/24)
+     ─────────────────────────────────────────────────────────────
+     Device queries: "Where is n8n.snowfox.live?"
+     │
+     ▼
+     Local Router / Pi-hole DNS intercepts query (Split-Horizon override):
+     Returns: 10.10.10.10 (nginx-safe on vmbr1)
+     │
+     ▼
+     Traffic routes entirely within your local house network.
+     * Tailscale is NOT needed because you are already inside the castle walls.
+     * Traffic NEVER touches Cloudflare or the public internet.
+
+
+  2. OUTSIDE (On Cellular 4G/5G or Coffee Shop Wi-Fi) - TAILSCALE OFF
+     ────────────────────────────────────────────────────────────────
+     Device queries: "Where is n8n.snowfox.live?"
+     │
+     ▼
+     Public Resolvers (Google 8.8.8.8 / Cloudflare 1.1.1.1 / Mobile Carrier):
+     Returns: NXDOMAIN (Non-Existent Domain).
+     │
+     ▼
+     Browser shows: "This site can’t be reached (ERR_NAME_NOT_RESOLVED)".
+     * Scanners and public visitors CANNOT see or connect to your services.
+
+
+  3. OUTSIDE (On Cellular 4G/5G or Coffee Shop Wi-Fi) - TAILSCALE ON
+     ───────────────────────────────────────────────────────────────
+     Device queries: "Where is n8n.snowfox.live?"
+     │
+     ▼
+     Tailscale MagicDNS intercepts query for search domain "snowfox.live":
+     Forwards DNS to Pi-hole via Subnet Router (100.127.129.106 -> 192.168.1.135)
+     Returns: 10.10.10.10
+     │
+     ▼
+     WireGuard encrypted tunnel connects securely to your Proxmox subnet router.
+     * ONLY YOU can access your private services from outside.
+═════════════════════════════════════════════════════════════════════════════════════
+```
+
+### Why Cloudflare Does NOT Point Private Services to Your Tailscale IP:
+You might ask: *"Why doesn't Cloudflare public DNS hold A records pointing n8n.snowfox.live to my Tailscale IP `100.127.129.106`?"*
+
+This was intentionally designed per ADR-008 for two security reasons:
+1. **OSINT Reconnaissance Leakage:** Putting hostnames in public Cloudflare DNS allows crawlers (Shodan, Censys, VirusTotal) to catalog every internal tool you run and map your Tailscale IP. Keeping them off public DNS returns `NXDOMAIN` to everyone outside.
+2. **DNS Rebind Drops:** Cellular carriers and hotel/airport Wi-Fi often silently drop DNS replies returning `100.64.0.0/10` (CGNAT/Tailscale) or `10.0.0.0/8` IPs due to anti-rebinding filters.
+
+### Summary Rule of Thumb:
+- **At Home (Wi-Fi):** You connect natively via local Split-Horizon DNS. (Tailscale optional).
+- **Away (Cellular/External Wi-Fi):** Tailscale is required. Without it, you get `NXDOMAIN`.
+- **Publicly Accessible Exception:** Only `vault.snowfox.live` (Cloudflare Tunnel) and `simplearch.snowfox.live` (Cloudflare Pages) are configured in Cloudflare and reachable by anyone without Tailscale.
+
+
 
 

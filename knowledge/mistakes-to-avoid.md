@@ -105,3 +105,7 @@
 #### ❌ Relying on Self-Signed Certificates for Internal Portals
 - **Problem:** Self-signed certificates cause persistent browser warning screens (`NET::ERR_CERT_AUTHORITY_INVALID`), break browser extensions, and disrupt WebSocket communication (e.g. Proxmox NoVNC console).
 - **Fix:** Automate genuine Let's Encrypt Wildcard certificates (`*.snowfox.live`) using DNS-01 API TXT record validation. Because validation occurs entirely over the Cloudflare DNS API, zero public ports need to be forwarded or exposed to the internet.
+
+#### ❌ Assuming Internal Domain Access on Home Wi-Fi Implies Public Internet Exposure
+- **Problem:** Testing an internal branded domain (e.g. `https://n8n.snowfox.live`, `https://mermaid.snowfox.live`) without Tailscale on a home PC or phone and assuming it is accidentally exposed to the public internet because it loaded.
+- **Fix:** Understand the Split-Horizon DNS boundary. Home routers and Pi-hole intercept queries for `*.snowfox.live` locally and route directly to `10.10.10.10` over LAN. Public DNS resolvers (1.1.1.1, 8.8.8.8) return `NXDOMAIN`. To verify true public internet isolation, query external DNS (`dig @1.1.1.1 n8n.snowfox.live` or `curl -I` from cellular data with Wi-Fi and Tailscale turned OFF).
