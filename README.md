@@ -29,160 +29,194 @@ Welcome to the lab repository. This vault tracks all architecture experiments, f
 ```mermaid
 flowchart TD
     %% ==================================================
-    %% 1. Physical Network and WAN
+    %% 1. Physical Network, Gateway & WAN
     %% ==================================================
-    subgraph PhysicalWAN["Physical Network & WAN"]
-        ISP["ISP"] --> ONU["ONU"]
-        ONU --> Router{"Physical Router<br/>OpenWrt Archer C6"}
+    subgraph PhysicalWAN["1. Physical Network & Hardware Layer"]
+        ISP["ISP Fiber"] --> ONU["Fiber ONU"]
+        ONU --> Router{"Physical Gateway<br/>TP-Link Archer C6 v3 (OpenWrt)<br/>192.168.1.1<br/>Mode 1 / Mode 2 / Mode 3 WAN"}
 
-        Router -->|Whole-Home Default Restrictions / Parental Control| Repeater["Wi-Fi Repeater"]
-        Repeater --> Dad["Dad's Phone (Restricted)"]
-        Repeater --> Mom["Mom's Phone (Restricted)"]
+        Router -->|Parental Controls & Strict-Order DNS| Repeater["Wi-Fi Repeater"]
+        Repeater --> Dad["Dad Phone (Restricted)"]
+        Repeater --> Mom["Mom Phone (Restricted)"]
 
-        Router -->|MAC Allowlist / Unrestricted| MyPhone["My Phone"]
-        Router -->|Wired LAN / Unrestricted| PC["HP EliteDesk PC"]
+        Router -->|Allowlisted / Unrestricted LAN| PC["HP EliteDesk PC (192.168.1.197)"]
+        Router -->|Allowlisted / Unrestricted Wi-Fi| MyPhone["My Phone (192.168.1.185)"]
 
-        Router -->|Dedicated 2.4GHz Low-TX SSID<br/>MAC Allowlist + L2 Isolation| IoT_WiFi["Isolated IoT Wi-Fi<br/>snowfox-iot"]
+        Router -->|Isolated 2.4GHz SSID: snowfox-iot| IoT_WiFi["Isolated IoT Wi-Fi<br/>snowfox-iot (VLAN 30)"]
         IoT_WiFi --> ESP32["ESP32 Dev Board"]
         IoT_WiFi --> ESP8266["ESP8266 Dev Board"]
     end
 
     %% ==================================================
-    %% 2. Proxmox Host and Physical Connectivity
+    %% 2. Cloudflare 24/7 Edge & Remote Access Mesh
     %% ==================================================
-    subgraph ProxmoxHost["Proxmox VE Hypervisor - ThinkPad Laptop"]
+    subgraph CloudEdge["2. Cloudflare 24/7 Edge & Remote Tailscale Mesh"]
         direction TB
 
-        PVE["Proxmox Host<br/>PVE OS<br/>Tailscale + CrowdSec / Fail2ban"]
+        subgraph CloudflareEdge["Cloudflare 24/7 Global Edge"]
+            direction TB
+            CF_Worker["short.snowfox.live<br/>Cloudflare Worker + KV Edge<br/>(24/7 Bangladesh Geo-Fence)"]
+            CF_Pages["simplearch.snowfox.live<br/>Cloudflare Pages"]
+            CF_Tunnel["vault.snowfox.live<br/>Cloudflare Argo Tunnel (Encrypted)"]
+            CF_DNS["Public Cloudflare DNS<br/>*.snowfox.live -> NXDOMAIN<br/>(Zero OSINT / Topology Leak)"]
+        end
 
-        PhysicalNIC["Laptop Physical Ethernet NIC"]
+        subgraph RemoteMesh["Remote Clients Tier"]
+            direction TB
+            RemoteTailscale["Owner Remote Client<br/>(Phone / Laptop on Tailscale)"]
+        end
+    end
+
+    %% ==================================================
+    %% 3. Proxmox VE Hypervisor Host
+    %% ==================================================
+    subgraph ProxmoxHost["3. Proxmox VE Hypervisor - ThinkPad Host (192.168.1.2)"]
+        direction TB
+
+        PVE["Proxmox VE 9.2.2 Host<br/>Tailscale Subnet Router (100.127.129.106)<br/>Auto Power-Manager (12 AM Off / 7 AM RTC Wake)<br/>WoL Enabled (enp12s0)"]
+
+        PhysicalNIC["Physical GbE NIC: enp12s0"]
         VMbr0["vmbr0 - Physical LAN / OOB Management<br/>192.168.1.0/24"]
+        VMbr100["vmbr100 - Trunked WAN VLAN Bridge<br/>enp12s0.100 (Trunked to Router)"]
 
         PhysicalNIC --- VMbr0
+        PhysicalNIC --- VMbr100
         VMbr0 --- PVE
 
-        %% Out-of-band services
-        subgraph OOB["Out-of-Band Management Services"]
+        %% Out-of-band management services on vmbr0
+        subgraph OOB["Out-of-Band Management Services (vmbr0)"]
             direction TB
-            LXC200["LXC: Router Web UI<br/>Switch WAN Mode"]
-            PiHoleOOB["LXC: Pi-hole DNS Sinkhole"]
+            LXC200["🟢 LXC 200: wan-controller<br/>192.168.1.130:80<br/>WAN Mode Switcher & REST API<br/>wan.snowfox.live / wan.lab"]
+            PiHoleOOB["🟢 LXC 205: pihole-oob<br/>192.168.1.135:80/53<br/>Pi-hole v6 Ad/Adult DNS Sinkhole<br/>Split-Horizon DNS (*.snowfox.live -> 10.10.10.10)"]
         end
 
         VMbr0 --- LXC200
         VMbr0 --- PiHoleOOB
 
-        %% OpenWrt VM
-        subgraph RouterVM["Virtual Router"]
+        %% OpenWrt Core Router VM
+        subgraph RouterVM["Virtual Core Router (VM 100)"]
             direction TB
-            OpenWrt["OpenWrt VM - Core Router<br/>Firewall + Routing<br/>CrowdSec / Firewall Bouncer, if configured"]
+            OpenWrt["🟢 OpenWrt 25.12.6 VM 100<br/>Core Firewall & Multi-Zone Router (192.168.1.129)<br/>VLAN 100 PPPoE Dialer (eth4 / Mode 2 & 3)<br/>Audited Cross-Zone Pinholes"]
         end
 
-        %% OpenWrt WAN connection to physical LAN
-        VMbr0 ---|OpenWrt VM WAN vNIC| OpenWrt
+        VMbr0 ---|eth0: LAN Management| OpenWrt
+        VMbr100 ---|eth4: Trunked PPPoE WAN| OpenWrt
 
-        %% USB Ethernet adapter and alternate WAN
-        USBNIC["USB-to-Ethernet Adapter"]
-
-        USBNIC -.->|USB device passthrough| OpenWrt
-        USBNIC -.->|Direct connection, only when needed| ONU
+        %% Alternate USB WAN
+        USBNIC["USB-to-Ethernet Adapter (35b5:3500)<br/>CDC Ether (eth6 / Swing WAN)"]
+        USBNIC -.->|Direct Passthrough| OpenWrt
 
         %% ==================================================
-        %% 3. Proxmox Internal Bridges and Service Zones
+        %% 4. Proxmox Internal Bridges and Service Zones
         %% ==================================================
-        subgraph Bridges["Proxmox Internal Bridges"]
+        subgraph Bridges["Proxmox Internal Isolated Bridges"]
             direction TB
 
             %% Safe internal zone (Applications Tier)
-            subgraph ZoneSafe["Safe Zone - vmbr1<br/>Internal Application Services"]
+            subgraph ZoneSafe["Safe Internal Zone - vmbr1 (10.10.10.0/24)"]
                 direction TB
 
-                NginxSafe["Nginx + Tailscale<br/>Cloudflare DNS - Gray Proxy"]
+                NginxSafe["🟢 LXC 201: nginx-safe (10.10.10.10)<br/>Split-Horizon Reverse Proxy (:443)<br/>Wildcard TLS: *.snowfox.live (Let's Encrypt)<br/>(Terraform Managed)"]
 
-                N8N["n8n Automation"]
-                Gitea["Gitea"]
-                Mermaid["Mermaid Diagram Server<br/>(Live Editor / Renderer)"]
-                Immich["Immich"]
-                NAS["HDD NAS / FileBrowser"]
-                Bookstack["BookStack"]
-                Kiwix["Kiwix - Offline ZIM"]
-                Jellyfin["Jellyfin / Plex"]
+                N8N["🟢 LXC 240: n8n Automation Engine<br/>10.10.10.25:5678 (Native Node.js 22 LTS)<br/>https://n8n.snowfox.live<br/>(Terraform Managed)"]
+                Mermaid["🟢 LXC 245: Mermaid Diagram Server<br/>10.10.10.26:80 (Native Nginx SPA)<br/>https://mermaid.snowfox.live<br/>(Terraform Managed)"]
+                ShortManager["🟢 LXC 225: short-manager<br/>10.10.10.35:8080 (Python/Flask Web UI)<br/>https://short-admin.snowfox.live<br/>(Terraform Managed)"]
+                Gitea["⚪ LXC 260: Gitea Git Server<br/>10.10.10.15:3000 (Planned)"]
+                Immich["⚪ Immich (Planned)"]
+                NAS["⚪ HDD NAS / FileBrowser (Planned)"]
+                Bookstack["⚪ BookStack & Kiwix (Planned)"]
+                Jellyfin["⚪ Jellyfin / Plex (Planned)"]
 
                 NginxSafe --> N8N
-                NginxSafe --> Gitea
                 NginxSafe --> Mermaid
+                NginxSafe --> ShortManager
+                NginxSafe --> Gitea
                 NginxSafe --> Immich
                 NginxSafe --> NAS
                 NginxSafe --> Bookstack
-                NginxSafe --> Kiwix
                 NginxSafe --> Jellyfin
             end
 
-            %% Dedicated Database & Data Protection Zone
-            subgraph ZoneDB["Dedicated Database Tier - vmbr7<br/>Central Multi-Tenant & Cloud Sync"]
+            %% Dedicated Database & Data Protection Tier
+            subgraph ZoneDB["Dedicated Database Tier - vmbr7 (10.70.70.0/24)"]
                 direction TB
 
-                Database["Central Multi-Tenant Database<br/>LXC 210 (10.70.70.10)<br/>PostgreSQL 17 & Redis 7<br/>Strict Port 5432 (TLS / SCRAM)"]
-                DBBackup["Central Database Backup Engine<br/>Outbound Cold-Pull: Neon & Supabase<br/>Automated pg_dump to Local Storage"]
+                Database["🟢 LXC 210: db-central (10.70.70.10)<br/>Multi-Tenant PostgreSQL 17 + Redis 7<br/>Strict SCRAM-SHA-256 Authentication"]
+                DBBackup["⚪ DBBackup Engine (10.70.70.11)<br/>Cold-Pull: Supabase & Neon<br/>Automated pg_dump to Storage (Planned)"]
 
                 DBBackup -.->|Local Dump Socket| Database
             end
 
-            %% Public ingress & hardened internet services
-            subgraph ZonePublicSafe["Public Ingress & Hardened Services - vmbr2"]
+            %% Public Ingress & Hardened Tier
+            subgraph ZonePublicSafe["Public Ingress & Hardened Tier - vmbr2 (10.20.20.0/24)"]
                 direction TB
 
-                NginxPublic["Nginx Public Ingress + cloudflared<br/>LXC 202 (10.20.20.10)<br/>Bangladesh Edge Geo-Fence"]
-
-                Vaultwarden["Vaultwarden Production<br/>LXC 220 (10.20.20.11:8443)<br/>E2EE Internal PKI"]
+                NginxPublic["🟢 LXC 202: nginx-public (10.20.20.10)<br/>cloudflared Ingress Tunnel Daemon<br/>Real-IP (CF-Connecting-IP)<br/>Stealth 404 /admin Lockdown"]
+                Vaultwarden["🟢 LXC 220: Vaultwarden Production<br/>10.20.20.11:8443 (Mutual Internal PKI TLS)<br/>https://vault.snowfox.live"]
 
                 NginxPublic --> Vaultwarden
             end
 
-            %% Home Assistant & IoT
-            subgraph ZoneHA["Home Assistant & IoT Zone - vmbr3"]
-                HA["Home Assistant Core & Integrations<br/>Native Tailscale Integration"]
-                MQTT_Local["Local MQTT Broker (Mosquitto)<br/>ESP32 / ESP8266 IoT Sensors"]
+            %% Home Assistant & IoT Zone
+            subgraph ZoneHA["Home Assistant & IoT Zone - vmbr3 (10.30.30.0/24)"]
+                direction TB
+                HA["⚪ Home Assistant Core (10.30.30.5)<br/>Native Tailscale Integration (Planned)"]
+                MQTT_Local["⚪ Mosquitto MQTT Broker (10.30.30.2)<br/>ESP32 / ESP8266 Telemetry (Planned)"]
                 HA --- MQTT_Local
             end
 
             %% Unsafe services
-            subgraph ZoneUnsafe["Unsafe Online Services - vmbr4"]
+            subgraph ZoneUnsafe["Unsafe Online Services - vmbr4 (10.40.40.0/24)"]
                 direction TB
-
-                ArrStack["*Arr Stack & qBittorrent<br/>Direct host storage mount"]
+                ArrStack["⚪ *Arr Stack & qBittorrent<br/>Direct Host Storage Mount (Planned)"]
             end
 
             %% VoIP / Direct Ingress DMZ
-            subgraph ZoneDMZ["VoIP & Direct Ingress DMZ - vmbr5"]
-                Asterisk["Asterisk / FreePBX<br/>VoIP / VoWiFi<br/>Fail2ban"]
-                Mail["Self-Hosted Mail<br/>SMTP / IMAP / POP3<br/>Fail2ban"]
+            subgraph ZoneDMZ["VoIP & Direct Ingress DMZ - vmbr5 (10.50.50.0/24)"]
+                direction TB
+                Asterisk["⚪ Asterisk / FreePBX VoIP (Planned)"]
+                Mail["⚪ Self-Hosted Mail Server (Planned)"]
             end
 
-            %% Dedicated Bots Zone
-            subgraph ZoneBots["Management Bots Zone - vmbr6"]
+            %% Dedicated Management Bots Zone
+            subgraph ZoneBots["Management Bots Zone - vmbr6 (10.60.60.0/24)"]
                 direction TB
-                Telegram["Telegram Bots<br/>Router Admin & Vaultwarden Bot<br/>Audited Firewall Pinholes"]
+                Telegram["⚪ Telegram Bots Hub<br/>Router Admin & Vaultwarden Bot (Planned)"]
             end
         end
 
         %% OpenWrt interfaces to isolated service bridges
-        OpenWrt <-->|Virtual NIC / vmbr1| ZoneSafe
-        OpenWrt <-->|Virtual NIC / vmbr2| ZonePublicSafe
-        OpenWrt <-->|Virtual NIC / vmbr3| ZoneHA
-        OpenWrt <-->|Virtual NIC / vmbr4| ZoneUnsafe
-        OpenWrt <-->|Virtual NIC / vmbr5| ZoneDMZ
-        OpenWrt <-->|Virtual NIC / vmbr6| ZoneBots
-        OpenWrt <-->|Virtual NIC / vmbr7| ZoneDB
+        OpenWrt <-->|eth1: vmbr1| ZoneSafe
+        OpenWrt <-->|eth2: vmbr2| ZonePublicSafe
+        OpenWrt <-->|eth3: vmbr3| ZoneHA
+        OpenWrt <-->|Pending: vmbr4| ZoneUnsafe
+        OpenWrt <-->|Pending: vmbr5| ZoneDMZ
+        OpenWrt <-->|Pending: vmbr6| ZoneBots
+        OpenWrt <-->|eth5: vmbr7| ZoneDB
 
         %% Inter-bridge Database Pinholes
-        ZoneSafe -.->|TCP:5432/6379 Pinholes| ZoneDB
-        Vaultwarden -.->|TCP:5432 Audited Pinhole| Database
+        N8N -.->|TCP:5432 Pinhole (n8n_db)| Database
+        Vaultwarden -.->|TCP:5432 Pinhole (vaultwarden_db)| Database
+        Gitea -.->|TCP:5432 Pinhole (gitea_db)| Database
+        ShortManager -.->|Outbound HTTPS Link Sync| CF_Worker
         DBBackup -.->|Outbound WAN Sync| OpenWrt
     end
 
-    %% Physical router to Proxmox
-    Router -->|Trunk Cable: Untagged LAN + VLAN 100 WAN + VLAN 30 IoT| PhysicalNIC
+    %% External Cross-Connections
+    Router -->|Single Trunk Cable: Untagged LAN + VLAN 100 WAN + VLAN 30 IoT| PhysicalNIC
+    Router -.->|DNS Redirect / Intercept :53| PiHoleOOB
+    Router -.->|7:00 AM Cron WoL Magic Packet| PhysicalNIC
     IoT_WiFi -.->|802.1Q VLAN 30 Trunk / MQTT:1883 Telemetry| ZoneHA
+
+    RemoteTailscale ==>|Encrypted WireGuard Mesh (100.64.0.0/10)| PVE
+    PVE -.->|DNAT :80,:443 to 10.10.10.10| NginxSafe
+    PVE -.->|DNAT :53 to 192.168.1.135| PiHoleOOB
+
+    CF_Tunnel ==>|Encrypted Tunnel: snowfox-tunnel| NginxPublic
+    NginxSafe -.->|OOB Proxy: https://pve.snowfox.live -> :8006| PVE
+    NginxSafe -.->|OOB Proxy: https://router.snowfox.live -> :443| Router
+    NginxSafe -.->|OOB Proxy: https://pihole.snowfox.live -> :80| PiHoleOOB
+    NginxSafe -.->|OOB Proxy: https://wan.snowfox.live -> :80| LXC200
 ```
 
 ---
