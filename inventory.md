@@ -14,7 +14,14 @@
 | **Mobile Node**     | Mobile Companion / Automations | Realme P1 5G (Termux + MacroDroid)  | `ssh phone`                        |
 | **Virtual Router**        | Test lab & Container Gateway        | OpenWrt 25.12.6 VM (Proxmox VM 100) | `ssh openwrt-vm` (`192.168.1.129`) |
 | **Pi-hole DNS Sinkhole**  | Out-of-Band Adblock & Parental Sink | Debian 12 LXC (Proxmox LXC 205)     | Web UI: `http://192.168.1.135/admin` (`projects/07-pihole-dns-sinkhole`) |
-| **n8n Automation Engine** | Low-Code Event & Breach Watchdog   | Proxmox LXC (Planned - `vmbr1`)     | Web UI: `http://10.10.10.25:5678` (`projects/08-n8n-workflow-automation`) |
+| **WAN Controller**        | Fail-Safe WAN Mode Dashboard        | Debian 12 LXC (Proxmox LXC 200)     | Web UI: `http://192.168.1.130` (`projects/01-dual-openwrt-routing`) |
+| **Safe Reverse Proxy**    | Internal Split-Horizon Wildcard TLS | Debian 13 LXC (Proxmox LXC 201)     | Reverse Proxy (`10.10.10.10`) (`projects/02-per-zone-nginx-proxies`) |
+| **Public Ingress Proxy**  | Cloudflare Tunnel & Public Ingress  | Debian 13 LXC (Proxmox LXC 202)     | Reverse Proxy (`10.20.20.10`) (`projects/02-per-zone-nginx-proxies`) |
+| **Central Database**      | Multi-Tenant Postgres 17 & Redis 7  | Debian 13 LXC (Proxmox LXC 210)     | Database Tier (`10.70.70.10:5432`) (`projects/12-central-database-service`) |
+| **Vaultwarden Vault**     | Self-Hosted Password Vault          | Debian 13 LXC (Proxmox LXC 220)     | HTTPS: `https://vault.snowfox.live` (`projects/03-vaultwarden-service`) |
+| **Short Link Manager**    | Private Short-Link Admin UI         | Debian 13 LXC (Proxmox LXC 225)     | Web UI: `http://10.10.10.35:8080` (`projects/13-personal-url-shortener`) |
+| **n8n Automation Engine** | Low-Code Event & Incident Engine   | Debian 13 LXC (Proxmox LXC 240)     | Web UI: `https://n8n.snowfox.live` (`projects/08-n8n-workflow-automation`) |
+| **Mermaid Diagram Server**| Diagram Editor & Renderer           | Debian 13 LXC (Proxmox LXC 245)     | Web UI: `https://mermaid.snowfox.live` (`projects/14-mermaid-diagram-server`) |
 | **Telegram Bot Hub**      | Central Alerting & Dispatcher       | Node/Python daemon (Planned)        | Bot API (`projects/09-telegram-bot-hub`) |
 
 ---
@@ -37,7 +44,7 @@
 - **Apex Domain:** `snowfox.live`
   - **Registrar / Expiry:** Registered 2026-03-17, Expires **2027-03-17**.
   - **DNS & Edge:** Cloudflare (Zone ID, Account ID, Tunnel ID configured via local `.env`).
-  - **IaC Tooling:** Terraform in `~/.cloudflare-terraform/` (`snowfox-tunnel`).
+  - **IaC Tooling:** Declarative Terraform in `iac/terraform/` (`proxmox`, `cloudflare`, `acme-wildcard`) and agentless `pyinfra` in `iac/`.
   - **Current Live DNS Records:** 
     - `vault.snowfox.live` (CNAME $\rightarrow$ `6f2301e3-8ebb-4ffc-b8bc-b7dedd3cfe06.cfargotunnel.com`, Proxied via Cloudflare Tunnel)
     - All private homelab services (`pve`, `router`, `wan`, `pihole`, `short-admin`, `gitea`, etc.) return `NXDOMAIN` on public Cloudflare DNS per Split-Horizon architecture.
@@ -99,6 +106,7 @@ The HP EliteDesk Mini PC currently runs several local services:
 | **Mosquitto MQTT** | `10.30.30.2` | `mqtt.lab` | `vmbr3` (IoT Zone) | Local IoT Sensor Telemetry Broker |
 | **Home Assistant** | `10.30.30.5` | `ha.lab` | `vmbr3` (IoT Zone) | Central Home Automation Hub |
 | **Short Link Manager** | `10.10.10.35` | `short.internal.lab` | `vmbr1` (Safe Internal) | Private 2-Page Shortener Web UI (:8080) |
+| **Mermaid Diagram Server** | `10.10.10.26` | `mermaid.lab` | `vmbr1` (Safe Internal) | Live Editor & Diagram Renderer (:80) |
 
 ---
 
@@ -141,13 +149,14 @@ The HP EliteDesk Mini PC currently runs several local services:
 | **Central Database Service (LXC 210)** | Debian 13 LXC | `10.70.70.10` (`vmbr7`) | 🟢 **Live** | Multi-tenant PostgreSQL 17.11 (`scram-sha-256`, SSL enforced) + Redis 7 (`projects/12-central-database-service`) |
 | **Safe Internal Reverse Proxy (LXC 201)**| Debian 13 LXC | `10.10.10.10` (`vmbr1`) | 🟢 **Live** | Split-Horizon TLS (`*.snowfox.live`), Nginx reverse proxy for PVE, Router, WAN, Pi-hole, Gitea (`projects/02-per-zone-nginx-proxies/split-horizon-dns-guide.md`) |
 | **Gitea Git Server (LXC 260)** | Proxmox LXC | `10.10.10.15` (`vmbr1`) | ⚪ **Planned** | Self-hosted Git server backed by central PostgreSQL (`db-central`) |
-| **n8n Automation Engine (LXC 240)** | Proxmox LXC | `10.10.10.25` (`vmbr1`) | ⚪ **Planned** | Workflow & security incident automation hub (`projects/08-n8n-workflow-automation`) |
+| **n8n Automation Engine (LXC 240)** | Debian 13 LXC | `10.10.10.25` (`vmbr1`) | 🟢 **Live** | Native Node.js 22 LTS, systemd `n8n.service`, PostgreSQL 17 backend (`n8n_db`), Split-Horizon TLS via `nginx-safe` (`projects/08-n8n-workflow-automation`), Terraform managed (`iac/terraform/proxmox/lxc-n8n.tf`) |
+| **Mermaid Diagram Server (LXC 245)** | Debian 13 LXC | `10.10.10.26` (`vmbr1`) | 🟢 **Live** | SvelteKit SPA served via native Nginx (:80), Split-Horizon TLS via `nginx-safe` (`projects/14-mermaid-diagram-server`), Terraform managed (`iac/terraform/proxmox/lxc-mermaid.tf`) |
+| **Personal URL Shortener (`short.snowfox.live` / LXC 225)** | Cloudflare Edge Worker + Debian 13 LXC | Cloudflare Edge / `10.10.10.35` (`vmbr1`) | 🟢 **Live** | Branded short-links (`short.snowfox.live`, BD Geo-fenced), private 2-page admin UI (:8080), automated SQLite/JSON backup engine (`projects/13-personal-url-shortener`), Terraform managed (`iac/terraform/proxmox/lxc-short-manager.tf`) |
 | **DBBackup Sync Container** | Proxmox LXC | `10.70.70.11` (`vmbr7`) | ⚪ **Planned** | Outbound cold-backup sync for Supabase & Neon, plus automated local pg_dumps |
 | **Home Assistant Core** | Proxmox VM / LXC | `10.30.30.5` (`vmbr3`) | ⚪ **Planned** | Planned smart home hub with native Tailscale |
 | **Mosquitto MQTT Broker** | Proxmox LXC | `10.30.30.2` (`vmbr3`) | ⚪ **Planned** | Planned broker for ESP32/ESP8266 telemetry (`EXP-003`) |
 | **Suricata / Snort L7 DPI** | Proxmox LXC / VM | `10.50.50.10` (`vmbr5`) | ⚪ **Planned** | L7 deep packet inspection, TLS SNI filtering, and automated threat mitigation (`knowledge/security-anti-bypass-vpn-dns-defense`) |
 | **Management Bots (LXC)** | Proxmox LXC | `10.60.60.10` (`vmbr6`) | ⚪ **Planned** | Planned isolated bot container with forced-command SSH wrapper |
-| **Personal URL Shortener (`short.snowfox.live`)** | Cloudflare Edge Worker + LXC | Cloudflare Edge / `10.10.10.35` (`vmbr1`) | ⚪ **Planned** | Branded short-links (`short.snowfox.live`, BD Geo-fenced), private 2-page admin UI in `vmbr1`, 24/7 edge redirection (`projects/13-personal-url-shortener`) |
 
 ---
 

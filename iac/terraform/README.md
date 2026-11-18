@@ -26,6 +26,8 @@ iac/terraform/
     ├── versions.tf              # bpg/proxmox provider
     ├── lxc-nginx-safe.tf        # LXC 201 (nginx-safe on vmbr1: 10.10.10.10)
     ├── lxc-short-manager.tf     # LXC 225 (short-manager on vmbr1: 10.10.10.35)
+    ├── lxc-n8n.tf               # LXC 240 (n8n on vmbr1: 10.10.10.25)
+    ├── lxc-mermaid.tf           # LXC 245 (mermaid on vmbr1: 10.10.10.26)
     ├── variables.tf             # PVE endpoint, node, Debian template, SSH keys
     ├── outputs.tf               # Container IPs & identifiers
     └── terraform.tfvars.example # Proxmox credentials template

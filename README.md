@@ -272,8 +272,8 @@ flowchart TD
 ### 8. n8n Low-Code Workflow Automation Engine
 - **Directory:** `projects/08-n8n-workflow-automation/`
 - **Documentation:** [n8n Workflow Automation Hub Architecture](projects/08-n8n-workflow-automation/README.md)
-- **Status:** Planned / Architecture & Security Blueprint
-- **Covers:** Low-code event pipeline engine, 10-minute Have I Been Pwned (HIBP) vault credential breach detection watchdog, automated high-entropy password regeneration with historical retention, and cross-service webhook orchestration.
+- **Current Live Status:** 🟢 Live Infrastructure & Base Engine (Proxmox LXC 240 at `10.10.10.25` on `vmbr1`) / Advanced Workflows in Progress
+- **Covers:** Low-code event pipeline engine, native Node.js 22 LTS, PostgreSQL 17 backend on `db-central` (`n8n_db`), Split-Horizon TLS (`https://n8n.snowfox.live`), Have I Been Pwned (HIBP) vault credential breach detection watchdog, and cross-service webhook orchestration.
 
 ### 9. Centralized Telegram Bot & Alerting Hub
 - **Directory:** `projects/09-telegram-bot-hub/`
@@ -303,5 +303,11 @@ flowchart TD
 ### 13. Personal Branded URL Shortener (`short.snowfox.live`)
 - **Directory:** `projects/13-personal-url-shortener/`
 - **Documentation:** [Personal URL Shortener Architecture](projects/13-personal-url-shortener/README.md)
-- **Status:** Planned / Architecture & Implementation Specification
-- **Covers:** Cloudflare Worker + KV edge redirection (24/7 zero-downtime), strict Bangladesh-only geo-fence (`request.cf.country === 'BD'`), and private air-gapped 2-page admin UI in Safe Internal Zone (`vmbr1`, `10.10.10.35` / `short.internal.lab`) synchronizing with Cloudflare via outbound-only HTTPS.
+- **Current Live Status:** 🟢 Live & Production Verified (Cloudflare Worker + KV Edge & Proxmox LXC 225 at `10.10.10.35:8080`)
+- **Covers:** Cloudflare Worker + KV edge redirection (24/7 zero-downtime), strict Bangladesh-only geo-fence (`request.cf.country === 'BD'`), private air-gapped 2-page admin UI in Safe Internal Zone (`vmbr1`, `10.10.10.35` / `short-admin.snowfox.live`), automated SQLite/JSON snapshot backups, and declarative Terraform management (`iac/terraform/proxmox/lxc-short-manager.tf`).
+
+### 14. Mermaid Live Editor & Diagram Renderer (`mermaid`)
+- **Directory:** `projects/14-mermaid-diagram-server/`
+- **Documentation:** [Mermaid Diagram Server Architecture](projects/14-mermaid-diagram-server/README.md)
+- **Current Live Status:** 🟢 Live & Production Verified (Proxmox LXC 245 at `10.10.10.26` on `vmbr1`)
+- **Covers:** Dedicated SvelteKit SPA served via native Nginx (:80), Split-Horizon Wildcard TLS via `nginx-safe` (`https://mermaid.snowfox.live`), declarative Terraform lifecycle (`lxc-mermaid.tf`), and zero nested Docker memory overhead (< 15 MiB RAM).
