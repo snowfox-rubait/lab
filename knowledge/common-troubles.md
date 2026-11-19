@@ -375,6 +375,40 @@ This was intentionally designed per ADR-008 for two security reasons:
 - **Away (Cellular/External Wi-Fi):** Tailscale is required. Without it, you get `NXDOMAIN`.
 - **Publicly Accessible Exception:** Only `vault.snowfox.live` (Cloudflare Tunnel) and `simplearch.snowfox.live` (Cloudflare Pages) are configured in Cloudflare and reachable by anyone without Tailscale.
 
+---
+
+## 🚫 Missing KVM Kernel Module on Boot (Virtual Router VM 100 Fails to Start)
+
+### Symptoms:
+- Public web services (such as `vault.snowfox.live`) return **`HTTP 530 / Error 1033 (Argo Tunnel Error)`**.
+- In LXC 202 (`nginx-public`), `cloudflared` repeatedly reports:
+  `Could not lookup srv records on _v2-origintunneld._tcp.argotunnel.com ... i/o timeout`
+  `From 10.20.20.10: Destination Host Unreachable`.
+- The gateway `10.20.20.1` is completely unreachable.
+- On Proxmox host, `qm status 100` reports `status: stopped`.
+- Attempting `qm start 100` fails with:
+  `KVM virtualisation configured, but not available. Either disable in VM configuration or enable in BIOS.`
+
+### Root Cause:
+Following a host boot or kernel update, the `kvm` and `kvm_intel` kernel modules were not automatically loaded by systemd. Without the kernel virtualization driver loaded (`/dev/kvm` missing), QEMU cannot initialize hardware-accelerated VMs, causing OpenWrt VM (VM 100) to fail on boot. Because VM 100 is the gateway for `public_ingress` (`vmbr2`), LXC 202 loses all outbound routing and cannot reach Cloudflare edge servers.
+
+### Resolution:
+1. Load KVM modules immediately:
+   ```bash
+   modprobe kvm_intel
+   ```
+2. Start OpenWrt VM 100:
+   ```bash
+   qm start 100
+   ```
+3. Make KVM module autoload permanent across boots:
+   ```bash
+   echo kvm > /etc/modules-load.d/kvm.conf
+   echo kvm_intel >> /etc/modules-load.d/kvm.conf
+   systemctl restart systemd-modules-load
+   ```
+
+
 
 
 
