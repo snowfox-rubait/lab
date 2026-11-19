@@ -16,6 +16,7 @@ Features:
 
 import os
 import sys
+import time
 import json
 import sqlite3
 import datetime
@@ -84,19 +85,27 @@ def init_db(db_path=SQLITE_DB):
     return conn
 
 
-def fetch_links_from_edge(worker_url, secret_token):
-    """Retrieve all short links from the Cloudflare Worker edge API."""
+def fetch_links_from_edge(worker_url, secret_token, max_retries=6, retry_delay=5):
+    """Retrieve all short links from the Cloudflare Worker edge API with retries for boot-time network initialization."""
     url = f"{worker_url.rstrip('/')}/api/list"
     req = urllib.request.Request(url, method="GET")
     req.add_header("Authorization", f"Bearer {secret_token}")
     req.add_header("User-Agent", USER_AGENT)
 
-    with urllib.request.urlopen(req, timeout=15) as resp:
-        if resp.status != 200:
-            raise RuntimeError(f"Edge API returned HTTP {resp.status}")
-        raw = resp.read().decode("utf-8")
-        data = json.loads(raw)
-        return data.get("links", [])
+    last_err = None
+    for attempt in range(1, max_retries + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                if resp.status != 200:
+                    raise RuntimeError(f"Edge API returned HTTP {resp.status}")
+                raw = resp.read().decode("utf-8")
+                data = json.loads(raw)
+                return data.get("links", [])
+        except (urllib.error.URLError, TimeoutError) as e:
+            last_err = e
+            if attempt < max_retries:
+                time.sleep(retry_delay)
+    raise last_err
 
 
 def prune_old_snapshots(snapshot_dir=SNAPSHOT_DIR, days=RETENTION_DAYS):
